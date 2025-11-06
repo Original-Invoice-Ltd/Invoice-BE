@@ -1,0 +1,57 @@
+spring:
+  config:
+    import: secrets.properties
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 20MB
+  datasource:
+    url: ${DATABASE_URL_DEV}
+    username: ${DATABASE_USER_DEV}
+    password: ${DATABASE_PASSWORD_DEV}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 8
+      minimum-idle: 2
+      idle-timeout: 30000
+      max-lifetime: 600000
+      connection-timeout: 10000
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+  mail:
+    host: ${SPRING_MAIL_HOST}
+    port: ${SPRING_MAIL_PORT}
+    username: ${SPRING_MAIL_USERNAME}
+    password: ${SPRING_MAIL_PASSWORD}
+    protocol: ${SPRING_MAIL_PROTOCOL}
+    properties:
+      mail.smtp.auth: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH}
+      mail.smtp.starttls.required: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED}
+      mail.smtp.starttls.enable: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE}
+
+eureka:
+  instance:
+    #hostname: 192.168.0.146
+    hostname: localhost
+    prefer-ip-address: true
+  client:
+    service-url:
+      #defaultZone: http://41.78.80.108:8761/eureka/
+       defaultZone : http://localhost:8761/eureka/
+
+cloud:
+  api:
+    name: ${CLOUD_API_NAME}
+    secret: ${CLOUD_API_SECRET}
+    key: ${CLOUD_API_KEY}
+
+server:
+  port: 8089
+  address: 0.0.0.0
+
+rsa:
+  public-key: classpath:keys/publicKey.pem
+  private-key: classpath:keys/privateKey.pem
