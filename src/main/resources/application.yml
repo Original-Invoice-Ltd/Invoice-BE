@@ -1,0 +1,8 @@
+spring:
+  application:
+    name: Invoice-BE
+  profiles:
+    active: dev
+
+server:
+  port: 8089
