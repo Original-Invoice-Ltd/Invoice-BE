@@ -1,11 +1,10 @@
 package invoice.dtos.request;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
+import org.springframework.web.multipart.MultipartFile;
 
 @Setter
 @Getter
@@ -14,10 +13,10 @@ public class CreateInvoiceRequest {
     private String website;
     private String businessOwner;
     private String invoiceNumber;
-    private String logoUrl;
-    private String imageUrl;
-    private LocalDate creationDate;
-    private LocalDate dueDate;
+    private MultipartFile logo;
+    private MultipartFile image;
+    private LocalDateTime creationDate;
+    private LocalDateTime dueDate;
     private String currency;
     private Double discount;
 }

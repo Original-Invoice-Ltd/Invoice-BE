@@ -3,7 +3,7 @@ package invoice.dtos.response;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Setter
 @Getter
@@ -15,8 +15,8 @@ public class CreateInvoiceResponse {
     private String invoiceNumber;
     private String logoUrl;
     private String imageUrl;
-    private LocalDate creationDate;
-    private LocalDate dueDate;
+    private LocalDateTime creationDate;
+    private LocalDateTime dueDate;
     private String currency;
     private Double discount;
 }
