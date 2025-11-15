@@ -17,8 +17,8 @@ public class InvoiceController {
 
     private final InvoiceService invoiceService;
 
-    @PostMapping
-    public ResponseEntity<CreateInvoiceResponse> createInvoice(@RequestBody CreateInvoiceRequest request) {
+    @PostMapping(consumes = {"multipart/form-data"})
+    public ResponseEntity<CreateInvoiceResponse> createInvoice(@ModelAttribute CreateInvoiceRequest request) {
         CreateInvoiceResponse response = invoiceService.createInvoice(request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
@@ -35,12 +35,13 @@ public class InvoiceController {
         return ResponseEntity.ok(responses);
     }
 
-    @PutMapping("/{id}")
+    @PatchMapping(value = "/{id}", consumes = {"multipart/form-data"})
     public ResponseEntity<CreateInvoiceResponse> updateInvoice(
             @PathVariable Long id,
-            @RequestBody CreateInvoiceRequest request) {
-        CreateInvoiceResponse response = invoiceService.updateInvoice(id, request);
-        return ResponseEntity.ok(response);
+            @ModelAttribute CreateInvoiceRequest request) {
+
+        CreateInvoiceResponse updated = invoiceService.updateInvoice(id, request);
+        return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/{id}")
