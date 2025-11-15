@@ -35,13 +35,4 @@ public class CloudConfig {
         );
         return new Cloudinary(map);
     }
-
-
-   @Bean
-    public ModelMapper modelMapper() {
-    ModelMapper mapper = new ModelMapper();
-    mapper.getConfiguration().setSkipNullEnabled(true);
-    return mapper;
-}
-
 }
