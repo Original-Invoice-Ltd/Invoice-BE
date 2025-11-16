@@ -1,6 +1,6 @@
 spring:
   config:
-    import: secrets.properties
+    import: secret.yml
   servlet:
     multipart:
       enabled: true
