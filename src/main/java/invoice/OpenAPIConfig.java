@@ -1,13 +1,21 @@
 package invoice;
 
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Contact;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
 @Configuration
 public class OpenAPIConfig {
 
     @Bean
     public OpenAPI customOpenAPI() {
 
-        // Define the security scheme (Bearer Token)
-        SecurityScheme bearerAuthScheme = new SecurityScheme()
+        // Define the JWT Bearer authentication scheme
+        SecurityScheme bearerAuth = new SecurityScheme()
                 .name("Bearer Authentication")
                 .type(SecurityScheme.Type.HTTP)
                 .scheme("bearer")
@@ -23,10 +31,7 @@ public class OpenAPIConfig {
                                 .email("teresejosephyisa@gmail.com")
                         )
                 )
-                // Register the security scheme
-                .schemaRequirement("bearerAuth", bearerAuthScheme)
-
-                // Apply the scheme globally (adds lock icon to all endpoints)
+                .schemaRequirement("bearerAuth", bearerAuth)
                 .addSecurityItem(new SecurityRequirement().addList("bearerAuth"));
     }
 }
