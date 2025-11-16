@@ -1,0 +1,83 @@
+[33mcommit 18f88a4748c5882b79ff51d8e0359f917f33f05c[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32minvoiceManagement[m[33m)[m
+Merge: cd726c6 662757a
+Author: Yisaterese <teresejosephyisa@gmail.com>
+Date:   Sun Nov 16 23:00:17 2025 +0100
+
+    set branch up to date
+
+[33mcommit 662757a64513f56d9101b9698655c3c58f774089[m[33m ([m[1;31morigin/invoiceManagement[m[33m)[m
+Author: Banjo Solomon <151349000+banjoSolomon@users.noreply.github.com>
+Date:   Sun Nov 16 22:33:49 2025 +0100
+
+    Delete src/main/resources/secret.yml
+
+[33mcommit cd726c61b279ff7a2f0da4e307d0eab352e7a4e9[m
+Author: Yisaterese <teresejosephyisa@gmail.com>
+Date:   Sun Nov 16 22:24:50 2025 +0100
+
+    resolved  git push rejection
+
+[33mcommit a8756918a3e9b0bffb3353d1851e3e7f9bf22f93[m
+Author: Yisaterese <151354744+Yisaterese@users.noreply.github.com>
+Date:   Sun Nov 16 20:21:44 2025 +0100
+
+    Remove sensitive data from secret.yml
+    
+    Removed sensitive configuration details from secret.yml.
+
+[33mcommit f3ba82bd474fa8b25a2bedaf3c26b2dc9a10aa09[m
+Author: Yisaterese <teresejosephyisa@gmail.com>
+Date:   Sun Nov 16 20:13:34 2025 +0100
+
+    completed invoice management
+
+[33mcommit 282fd311eb1cb5663eecd23cccd32ed36289225e[m
+Author: Yisaterese <teresejosephyisa@gmail.com>
+Date:   Sat Nov 15 20:59:24 2025 +0100
+
+    resolved repos push fail
+
+[33mcommit 667368032b1331ca16e06a49fd7facdbc2d62430[m
+Author: Yisaterese <teresejosephyisa@gmail.com>
+Date:   Sat Nov 15 10:11:24 2025 +0100
+
+    cleaned the functions
+
+[33mcommit f090508a10f06d756420339f7bc079992d4d8784[m
+Author: Yisaterese <teresejosephyisa@gmail.com>
+Date:   Sat Nov 15 02:10:29 2025 +0100
+
+    added enpoints for managementg
+
+[33mcommit d52e1547ca892cd534c8f5d86c085e9b4efa4a93[m[33m ([m[1;31morigin/dev[m[33m)[m
+Author: Banjo Solomon <151349000+banjoSolomon@users.noreply.github.com>
+Date:   Thu Nov 6 17:11:42 2025 +0100
+
+    Upgrade GitHub Actions to latest versions
+
+[33mcommit 629d370a2816c959401fb6737a6c51334d035640[m
+Author: Banjo Solomon <151349000+banjoSolomon@users.noreply.github.com>
+Date:   Thu Nov 6 17:10:42 2025 +0100
+
+    Create  run-maven.yml
+
+[33mcommit 046319ba99c9a54cde9b5df02aaa172175addd2f[m
+Merge: 18357d8 ef75a45
+Author: Victor-Maverick <victormsonter@gmail.com>
+Date:   Thu Nov 6 17:02:51 2025 +0100
+
+    Merge pull request #2 from Original-Invoice-Ltd/Layout-and-Auth
+    
+    Added models, implemented security
+
+[33mcommit ef75a451f1a3b65f86adaae56a98b740eb9e7299[m[33m ([m[1;31morigin/Layout-and-Auth[m[33m)[m
+Author: Victor <victor.orlu@bdic.ng>
+Date:   Thu Nov 6 16:46:25 2025 +0100
+
+    Added models, implemented security
+
+[33mcommit 18357d828fc79f22121ba5498e8685f3c3b0079a[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m
+Author: Solomon <ayomidebanjo02@gmail.com>
+Date:   Tue Nov 4 16:34:18 2025 +0100
+
+    Initial commit
