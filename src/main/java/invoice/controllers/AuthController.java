@@ -71,16 +71,16 @@ public class AuthController {
             User user = userRepository.findByEmail(loginRequest.getEmail())
                     .orElseThrow(()->new BusinessException("user not found"));
             
-            if(!user.isVerified()) {
-                ErrorResponse errorResponse = ErrorResponse.builder()
-                        .responseTime(now())
-                        .isSuccessful(false)
-                        .error("AccountNotVerified")
-                        .message("Account not verified. Please check your email and verify your account.")
-                        .path("/api/auth/login")
-                        .build();
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
-            }
+//            if(!user.isVerified()) {
+//                ErrorResponse errorResponse = ErrorResponse.builder()
+//                        .responseTime(now())
+//                        .isSuccessful(false)
+//                        .error("AccountNotVerified")
+//                        .message("Account not verified. Please check your email and verify your account.")
+//                        .path("/api/auth/login")
+//                        .build();
+//                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+//            }
             
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(

@@ -23,8 +23,8 @@ public class UserResponse {
     private String imageUrl;
     public UserResponse(User user) {
         this.id = user.getId();
-        this.fullName = user.getFullName();
         this.email = user.getEmail();
+        this.fullName = user.getFullName();
         this.createdAt = user.getCreatedAt();
         this.roles = Collections.singletonList(String.valueOf(user.getRoles().stream().toList()));
         this.isActive = user.isVerified();
