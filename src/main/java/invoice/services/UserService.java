@@ -1,10 +1,8 @@
 package invoice.services;
 
 import invoice.dtos.request.PasswordRequest;
-import jakarta.mail.MessagingException;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.io.UnsupportedEncodingException;
+import invoice.dtos.request.SignUpRequest;
+import invoice.dtos.response.SignUpResponse;
 
 public interface UserService {
     boolean verifyUser(String token);
@@ -15,4 +13,6 @@ public interface UserService {
     boolean sendPasswordResetOTP(String email);
     boolean verifyPasswordResetOTP(String email, String otp);
     boolean resetPasswordWithOTP(String email, String otp, String newPassword);
+
+    SignUpResponse register(SignUpRequest signUpRequest);
 }

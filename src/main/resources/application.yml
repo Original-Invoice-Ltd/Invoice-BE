@@ -2,7 +2,7 @@ spring:
   application:
     name: Invoice-BE
   profiles:
-    active: dev
+    active: prod
 
 server:
   port: 8089
