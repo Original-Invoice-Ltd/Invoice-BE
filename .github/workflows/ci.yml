@@ -40,21 +40,20 @@ jobs:
     - name: Deploy to EC2
       run: |
         ssh -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
-
         echo "Logging into ECR..."
-        aws ecr get-login-password --region us-west-2 | docker login \
+        aws ecr get-login-password --region us-west-2 | sudo docker login \
           --username AWS \
           --password-stdin 138842205538.dkr.ecr.us-west-2.amazonaws.com
 
         echo "Pulling latest backend image..."
-        docker pull 138842205538.dkr.ecr.us-west-2.amazonaws.com/invoice:latest
+        sudo docker pull 138842205538.dkr.ecr.us-west-2.amazonaws.com/invoice:latest
 
         echo "Stopping and removing previous backend container (if any)..."
-        docker stop backend || true
-        docker rm backend || true
+        sudo docker stop backend || true
+        sudo docker rm backend || true
 
         echo "Starting backend with auto-restart enabled..."
-        docker run -d \
+        sudo docker run -d \
           --restart=always \
           --name backend \
           -p 8080:8080 \
@@ -65,6 +64,5 @@ jobs:
           138842205538.dkr.ecr.us-west-2.amazonaws.com/invoice:latest
 
         echo "Deployment complete!"
-        docker ps
-
+        sudo docker ps
         EOF
