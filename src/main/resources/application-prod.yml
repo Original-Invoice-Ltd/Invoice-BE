@@ -51,7 +51,7 @@ cloud:
 
 
 server:
-  port: 8983
+  port: 8089
   address: 0.0.0.0
 
 rsa:
