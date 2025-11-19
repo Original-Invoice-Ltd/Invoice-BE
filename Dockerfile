@@ -3,7 +3,7 @@ WORKDIR /app
 COPY . .
 RUN mvn -B clean package -DskipTests
 
-FROM openjdk:17
+FROM eclipse-temurin:17-jdk
 WORKDIR /app
 COPY --from=build /app/target/*.jar invoice.jar
 EXPOSE 8089
