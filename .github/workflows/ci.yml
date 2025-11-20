@@ -40,29 +40,33 @@ jobs:
     - name: Deploy to EC2
       run: |
         ssh -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
-        echo "Logging into ECR..."
+
+        echo "==== Logging into ECR ===="
         aws ecr get-login-password --region us-west-2 | sudo docker login \
           --username AWS \
           --password-stdin 138842205538.dkr.ecr.us-west-2.amazonaws.com
 
-        echo "Pulling latest backend image..."
+        echo "==== Downloading env file from S3 ===="
+        aws s3 cp s3://invoice-ev/invoice-BE.env /home/ubuntu/invoice-BE.env
+        chmod 600 /home/ubuntu/invoice-BE.env
+
+        echo "==== Pulling latest backend image ===="
         sudo docker pull 138842205538.dkr.ecr.us-west-2.amazonaws.com/invoice:latest
 
-        echo "Stopping and removing previous backend container (if any)..."
+        echo "==== Stopping previous backend container ===="
         sudo docker stop backend || true
         sudo docker rm backend || true
 
-        echo "Starting backend with auto-restart enabled..."
+        echo "==== Starting backend container (auto-restart enabled) ===="
         sudo docker run -d \
           --restart=always \
           --name backend \
           -p 8080:8080 \
           --link postgres:postgres \
-          -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/invoicedb \
-          -e SPRING_DATASOURCE_USERNAME=postgres \
-          -e SPRING_DATASOURCE_PASSWORD=admin \
+          --env-file /home/ubuntu/invoice-BE.env \
           138842205538.dkr.ecr.us-west-2.amazonaws.com/invoice:latest
 
-        echo "Deployment complete!"
+        echo "==== Deployment complete! ===="
         sudo docker ps
+
         EOF
