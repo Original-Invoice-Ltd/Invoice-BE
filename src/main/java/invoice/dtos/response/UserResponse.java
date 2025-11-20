@@ -28,6 +28,5 @@ public class UserResponse {
         this.createdAt = user.getCreatedAt();
         this.roles = Collections.singletonList(String.valueOf(user.getRoles().stream().toList()));
         this.isActive = user.isVerified();
-        this.phone = user.getPhone();
         this.imageUrl = (user.getMediaUrl() != null) ? user.getMediaUrl() : "";    }
 }
