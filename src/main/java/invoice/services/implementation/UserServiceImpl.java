@@ -57,7 +57,7 @@ public class UserServiceImpl implements UserService {
         user.setVerified(true);
         userRepository.save(user);
         tokenRepository.delete(vToken);
-        emailService.sendWelcomeEmail(user.getEmail(),user.getEmail());
+        emailService.sendWelcomeEmail(user.getEmail(),user.getFullName());
         return true;
     }
 
@@ -85,7 +85,7 @@ public class UserServiceImpl implements UserService {
         try {
             VerificationToken verificationToken = otpService.createOTPToken(user);
 
-            emailService.sendOTPEmail(user.getEmail(), user.getEmail(), verificationToken.getOtp());
+            emailService.sendOTPEmail(user.getEmail(), user.getFullName(), verificationToken.getOtp());
         } catch (Exception e) {
             log.error("Failed to send verification OTP to {}: {}", user.getEmail(), e.getMessage(), e);
             throw new BusinessException("Failed to send verification OTP: " + e.getMessage());
@@ -143,7 +143,6 @@ public class UserServiceImpl implements UserService {
     public SignUpResponse register(SignUpRequest signUpRequest) {
         boolean existsByEmail = userRepository.existsByEmail(signUpRequest.getEmail());
         if (existsByEmail) throw new BusinessException("user exists with email");
-
         User user = User.builder()
                 .email(signUpRequest.getEmail())
                 .status(PENDING)
@@ -153,10 +152,9 @@ public class UserServiceImpl implements UserService {
         user.setRoles(new HashSet<>());
         user.getRoles().add(Role.USER);
         User savedUser = userRepository.save(user);
-
         // Create OTP token and send OTP email
-//        VerificationToken verificationToken = otpService.createOTPToken(savedUser);
-//        emailService.sendOTPEmail(savedUser.getEmail(), savedUser.getFullName(), verificationToken.getOtp());
+        VerificationToken verificationToken = otpService.createOTPToken(savedUser);
+        emailService.sendOTPEmail(savedUser.getEmail(), savedUser.getFullName(), verificationToken.getOtp());
         SignUpResponse response = new SignUpResponse();
         response.setMessage("User registered successfully.");
         response.setCreatedAt(user.getCreatedAt());
