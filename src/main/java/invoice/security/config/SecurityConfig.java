@@ -27,6 +27,9 @@ public class SecurityConfig {
                 .addFilterBefore(authorizationFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PUBLIC_ENDPOINTS.toArray(new String[0])).permitAll()
+                        .requestMatchers("/api/users/delete-user","/api/users/all","/api/users/allCount","/api/users/delete-by-email","/api/users/disable-user").hasAnyAuthority("ADMIN","SUPER_ADMIN")
+                        .requestMatchers("/api/users/add-admin").hasAuthority("SUPER_ADMIN")
+                        .requestMatchers("/api/users/upload-photo").hasAnyAuthority("USER","ADMIN","SUPER_ADMIN")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(STATELESS))
