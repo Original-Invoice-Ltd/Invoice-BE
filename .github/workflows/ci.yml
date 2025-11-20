@@ -1,19 +1,68 @@
-name: CI Pipeline
+name: Deploy Backend to EC2
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    branches: [ "dev" ]
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up JDK 17
-        uses: actions/setup-java@v3
-        with:
-          java-version: '17'
-      - name: Build with Maven
-        run: mvn -B package --file pom.xml
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Build, Tag, and Push image to ECR
+      env:
+        ECR_REGISTRY: 138842205538.dkr.ecr.us-west-2.amazonaws.com
+        ECR_REPOSITORY: invoice
+        IMAGE_TAG: latest
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+    - name: Copy EC2 SSH Key
+      run: |
+        echo "${{ secrets.EC2_KEY }}" > private_key.pem
+        chmod 600 private_key.pem
+
+    - name: Deploy to EC2
+      run: |
+        ssh -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+        echo "Logging into ECR..."
+        aws ecr get-login-password --region us-west-2 | sudo docker login \
+          --username AWS \
+          --password-stdin 138842205538.dkr.ecr.us-west-2.amazonaws.com
+
+        echo "Pulling latest backend image..."
+        sudo docker pull 138842205538.dkr.ecr.us-west-2.amazonaws.com/invoice:latest
+
+        echo "Stopping and removing previous backend container (if any)..."
+        sudo docker stop backend || true
+        sudo docker rm backend || true
+
+        echo "Starting backend with auto-restart enabled..."
+        sudo docker run -d \
+          --restart=always \
+          --name backend \
+          -p 8080:8080 \
+          --link postgres:postgres \
+          -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/invoicedb \
+          -e SPRING_DATASOURCE_USERNAME=postgres \
+          -e SPRING_DATASOURCE_PASSWORD=admin \
+          138842205538.dkr.ecr.us-west-2.amazonaws.com/invoice:latest
+
+        echo "Deployment complete!"
+        sudo docker ps
+        EOF
