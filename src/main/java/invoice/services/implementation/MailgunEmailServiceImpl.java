@@ -1,217 +1,418 @@
 package invoice.services.implementation;
 
-import com.mashape.unirest.http.HttpResponse;
-import com.mashape.unirest.http.Unirest;
-import com.mashape.unirest.http.exceptions.UnirestException;
 import invoice.services.EmailService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.Base64;
 
 @Service
 @Slf4j
 public class MailgunEmailServiceImpl implements EmailService {
 
-    @Value("${MAILGUN_DOMAIN}")
-    private String mailgunDomain;
+    @Value("${mailgun.api.key}")
+    private String apiKey;
 
-    @Value("${MAILGUN_SECRET}")
-    private String mailgunApiKey;
+    @Value("${mailgun.domain}")
+    private String domain;
 
-    @Value("${MAIL_FROM_ADDRESS}")
-    private String fromAddress;
-
-    @Value("${MAIL_FROM_NAME}")
+    @Value("${mailgun.from.name}")
     private String fromName;
 
-    @Override
-    public void sendWelcomeEmail(String to, String name) {
-        try {
-            String subject = "Registration Successful!";
-            String htmlContent = buildWelcomeEmailBody(name);
+    @Value("${mailgun.from.email}")
+    private String fromEmail;
 
-            sendEmail(to, subject, htmlContent);
-            log.info("Welcome email sent successfully to: {}", to);
+    private final RestTemplate restTemplate;
+
+    public MailgunEmailServiceImpl() {
+        this.restTemplate = new RestTemplate();
+    }
+
+
+    @Override
+    public void sendWelcomeEmail(String toEmail, String name) {
+        String subject = "Welcome to Agro Smart Benue!";
+        String htmlContent = buildWelcomeEmailBody(name);
+
+        try {
+            sendEmailInternal(name, toEmail, subject, htmlContent);
+            log.info("Welcome email sent successfully to {}", toEmail);
         } catch (Exception e) {
-            log.error("Failed to send welcome email to: {}", to, e);
+            log.error("Failed to send welcome email to {}: {}", toEmail, e.getMessage(), e);
             throw new RuntimeException("Failed to send welcome email", e);
         }
     }
 
     @Override
     public void sendVerificationEmail(String toEmail, String firstName, String verificationToken, String frontendUrl) {
+        String subject = "Verify your email address";
+        String verificationUrl = frontendUrl + "?token=" + verificationToken;
+        String htmlContent = buildVerificationEmailTemplate(firstName, verificationUrl);
+
         try {
-            log.info("Attempting to send verification email to: {}", toEmail);
-            log.info("Frontend URL: {}", frontendUrl);
-            log.info("Verification Token: {}", verificationToken);
-
-            String subject = "Verify your email address";
-            String verificationUrl = frontendUrl + "?token=" + verificationToken;
-            String htmlContent = buildVerificationEmailTemplate(firstName, verificationUrl);
-
-            sendEmail(toEmail, subject, htmlContent);
-            log.info("Verification email sent successfully to: {}", toEmail);
+            sendEmailInternal(firstName, toEmail, subject, htmlContent);
+            log.info("Verification email sent successfully to {}", toEmail);
         } catch (Exception e) {
-            log.error("Failed to send verification email to: {}", toEmail, e);
+            log.error("Failed to send verification email to {}: {}", toEmail, e.getMessage(), e);
             throw new RuntimeException("Failed to send verification email", e);
         }
     }
 
-    private void sendEmail(String to, String subject, String htmlContent) throws UnirestException {
-        String fromField = fromName + " <" + fromAddress + ">";
-        
-        log.info("Sending email via Mailgun API to: {} from: {}", to, fromField);
-        log.info("Using domain: {} with API key: {}...", mailgunDomain, mailgunApiKey.substring(0, Math.min(10, mailgunApiKey.length())));
-        
-        // Use asString() instead of asJson() to avoid JSON parsing issues
-        HttpResponse<String> request = Unirest.post("https://api.mailgun.net/v3/" + mailgunDomain + "/messages")
-                .basicAuth("api", mailgunApiKey)
-                .queryString("from", fromField)
-                .queryString("to", to)
-                .queryString("subject", subject)
-                .queryString("html", htmlContent)
-                .asString();
-
-        log.info("Mailgun API response status: {} for email to: {}", request.getStatus(), to);
-        log.info("Mailgun API response body: {}", request.getBody());
-
-        if (request.getStatus() != 200) {
-            log.error("Mailgun API returned status: {} for email to: {}. Response: {}", 
-                     request.getStatus(), to, request.getBody());
-            throw new RuntimeException("Failed to send email via Mailgun API. Status: " + request.getStatus() + 
-                                     ". Response: " + request.getBody());
-        }
-
-        log.info("Email sent successfully via Mailgun API to: {} with status: {}", to, request.getStatus());
-    }
-
-    private String buildVerificationEmailTemplate(String firstName, String verificationUrl) {
-        return "<!DOCTYPE html>" +
-                "<html>" +
-                "<head><meta charset='UTF-8'><title>Email Verification</title></head>" +
-                "<body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>" +
-                "<div style='max-width: 600px; margin: 0 auto; padding: 20px;'>" +
-                "<h2 style='color: #2c3e50;'>Welcome to Original Invoice!</h2>" +
-                "<p>Hi " + firstName + ",</p>" +
-                "<p>Thank you for registering with us. To complete your registration and activate your account, please click the button below to verify your email address:</p>" +
-                "<div style='text-align: center; margin: 30px 0;'>" +
-                "<a href='" + verificationUrl + "' style='background-color: #3498db; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;'>Verify Email Address</a>" +
-                "</div>" +
-                "<p>If the button doesn't work, you can copy and paste the following link into your browser:</p>" +
-                "<p style='background-color: #f8f9fa; padding: 10px; border-radius: 5px; word-break: break-all; font-size: 14px;'>" + verificationUrl + "</p>" +
-                "<p style='color: #7f8c8d; font-size: 14px;'><strong>Note:</strong> This verification link will expire in 24 hours.</p>" +
-                "<p>If you didn't create an account with us, please ignore this email.</p>" +
-                "<p>Best regards,<br>The Original Invoice Team</p>" +
-                "</div>" +
-                "</body>" +
-                "</html>";
-    }
-
     @Override
     public void sendOTPEmail(String toEmail, String firstName, String otp) {
-        try {
-            log.info("Attempting to send OTP email to: {}", toEmail);
-            
-            String subject = "Your Verification Code";
-            String htmlContent = buildOTPEmailTemplate(firstName, otp);
+        String subject = "Your Verification Code";
+        String htmlContent = buildOTPEmailTemplate(firstName, otp);
 
-            sendEmail(toEmail, subject, htmlContent);
-            log.info("OTP email sent successfully to: {}", toEmail);
+        try {
+            sendEmailInternal(firstName, toEmail, subject, htmlContent);
+            log.info("OTP email sent successfully to {}", toEmail);
         } catch (Exception e) {
-            log.error("Failed to send OTP email to: {}", toEmail, e);
+            log.error("Failed to send OTP email to {}: {}", toEmail, e.getMessage(), e);
             throw new RuntimeException("Failed to send OTP email", e);
         }
     }
 
-    private String buildOTPEmailTemplate(String firstName, String otp) {
-        return "<!DOCTYPE html>" +
-                "<html>" +
-                "<head><meta charset='UTF-8'><title>Email Verification Code</title></head>" +
-                "<body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>" +
-                "<div style='max-width: 600px; margin: 0 auto; padding: 20px;'>" +
-                "<h2 style='color: #2c3e50;'>Email Verification</h2>" +
-                "<p>Hi " + firstName + ",</p>" +
-                "<p>To complete your email verification, please use the following 6-digit code:</p>" +
-                "<div style='text-align: center; margin: 30px 0;'>" +
-                "<div style='background-color: #f8f9fa; border: 2px solid #3498db; border-radius: 10px; padding: 20px; display: inline-block;'>" +
-                "<span style='font-size: 32px; font-weight: bold; color: #2c3e50; letter-spacing: 8px;'>" + otp + "</span>" +
-                "</div>" +
-                "</div>" +
-                "<p style='color: #7f8c8d; font-size: 14px;'><strong>Important:</strong></p>" +
-                "<ul style='color: #7f8c8d; font-size: 14px;'>" +
-                "<li>This code will expire in 10 minutes</li>" +
-                "<li>You have 5 attempts to enter the correct code</li>" +
-                "<li>If you didn't request this code, please ignore this email</li>" +
-                "</ul>" +
-                "<p>If you're having trouble, you can request a new verification code from the app.</p>" +
-                "<p>Best regards,<br>The BDIC Team</p>" +
-                "</div>" +
-                "</body>" +
-                "</html>";
-    }
-
     @Override
     public void sendPasswordResetOTPEmail(String toEmail, String firstName, String otp) {
-        try {
-            log.info("Attempting to send password reset OTP email to: {}", toEmail);
-            
-            String subject = "Password Reset Code";
-            String htmlContent = buildPasswordResetOTPEmailTemplate(firstName, otp);
+        String subject = "Password Reset Code";
+        String htmlContent = buildPasswordResetOTPEmailTemplate(firstName, otp);
 
-            sendEmail(toEmail, subject, htmlContent);
-            log.info("Password reset OTP email sent successfully to: {}", toEmail);
+        try {
+            sendEmailInternal(firstName, toEmail, subject, htmlContent);
+            log.info("Password reset email sent successfully to {}", toEmail);
         } catch (Exception e) {
-            log.error("Failed to send password reset OTP email to: {}", toEmail, e);
-            throw new RuntimeException("Failed to send password reset OTP email", e);
+            log.error("Failed to send password reset email to {}: {}", toEmail, e.getMessage(), e);
+            throw new RuntimeException("Failed to send password reset email", e);
         }
     }
 
+    // ================== Helper Method ==================
+
+    private void sendEmailInternal(String toName, String toEmail, String subject, String htmlContent) {
+        String url = String.format("https://api.mailgun.net/v3/%s/messages", domain);
+
+        // Create headers with Basic Auth
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        String auth = "api:" + apiKey;
+        String encodedAuth = Base64.getEncoder().encodeToString(auth.getBytes());
+        headers.set("Authorization", "Basic " + encodedAuth);
+
+        // Create form data
+        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+        body.add("from", String.format("%s <%s>", fromName, fromEmail));
+        body.add("to", String.format("%s <%s>", toName, toEmail));
+        body.add("subject", subject);
+        body.add("html", htmlContent);
+
+        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
+
+        try {
+            ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
+            
+            if (response.getStatusCode() == HttpStatus.OK) {
+                log.info("Email sent successfully to {} ({})", toName, toEmail);
+            } else {
+                log.error("Failed to send email. Status: {}, Response: {}", 
+                    response.getStatusCode(), response.getBody());
+                throw new RuntimeException("Failed to send email via Mailgun");
+            }
+        } catch (Exception e) {
+            log.error("Error sending email via Mailgun: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to send email via Mailgun", e);
+        }
+    }
+
+    // ================== HTML Templates ==================
+
+    private String buildVerificationEmailTemplate(String firstName, String verificationUrl) {
+        return """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #f5f7fa 0%%, #c3cfe2 100%%); padding: 40px 20px;">
+            <table cellpadding="0" cellspacing="0" border="0" width="100%%" style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">
+                <tr>
+                    <td style="background: linear-gradient(135deg, #16a34a 0%%, #15803d 100%%); padding: 40px 30px; text-align: center; position: relative;">
+                        <h1 style="color: white; margin: 0; font-size: 32px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">Agro Smart Benue</h1>
+                        <p style="color: rgba(255,255,255,0.9); margin: 12px 0 0 0; font-size: 15px;">Empowering Farmers, Growing Communities</p>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 40px 35px;">
+                        <div style="text-align: center; margin-bottom: 30px;">
+                            <div style="display: inline-block; background: linear-gradient(135deg, #dcfce7 0%%, #bbf7d0 100%%); padding: 15px; border-radius: 50%%; margin-bottom: 20px;">
+                                <span style="font-size: 40px;">✉️</span>
+                            </div>
+                            <h2 style="color: #16a34a; margin: 0 0 10px 0; font-size: 26px; font-weight: 700;">Welcome Aboard!</h2>
+                            <p style="color: #6b7280; font-size: 15px; margin: 0;">We're excited to have you join our community</p>
+                        </div>
+                        
+                        <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">Hi <strong style="color: #16a34a;">%s</strong>,</p>
+                        <p style="color: #4b5563; font-size: 15px; line-height: 1.7; margin: 0 0 30px 0;">Thank you for registering with Agro Smart Benue! You're just one step away from accessing our platform. Please verify your email address to complete your registration.</p>
+                        
+                        <div style="text-align: center; margin: 35px 0;">
+                            <a href="%s" style="background: linear-gradient(135deg, #16a34a 0%%, #15803d 100%%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3); transition: all 0.3s;">
+                                ✓ Verify Email Address
+                            </a>
+                        </div>
+                        
+                        <div style="background: linear-gradient(135deg, #fef3c7 0%%, #fde68a 100%%); border-left: 4px solid #f59e0b; padding: 15px 20px; border-radius: 8px; margin: 30px 0;">
+                            <p style="color: #92400e; font-size: 14px; margin: 0; line-height: 1.6;">
+                                <strong>⏰ Important:</strong> This verification link will expire in 24 hours.
+                            </p>
+                        </div>
+                        
+                        <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">If you didn't create an account, please ignore this email and no action will be taken.</p>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="background: linear-gradient(135deg, #f9fafb 0%%, #f3f4f6 100%%); padding: 30px 35px; border-top: 1px solid #e5e7eb;">
+                        <p style="color: #9ca3af; font-size: 13px; text-align: center; margin: 0 0 10px 0; line-height: 1.6;">
+                            Best regards,<br>
+                            <strong style="color: #16a34a;">The Agro Smart Benue Team</strong>
+                        </p>
+                        <p style="color: #d1d5db; font-size: 11px; text-align: center; margin: 15px 0 0 0;">
+                            © 2024 Agro Smart Benue. All rights reserved.
+                        </p>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """.formatted(firstName, verificationUrl);
+    }
+
+    private String buildOTPEmailTemplate(String firstName, String otp) {
+        return """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #f5f7fa 0%%, #c3cfe2 100%%); padding: 40px 20px;">
+            <table cellpadding="0" cellspacing="0" border="0" width="100%%" style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">
+                <tr>
+                    <td style="background: linear-gradient(135deg, #16a34a 0%%, #15803d 100%%); padding: 40px 30px; text-align: center; position: relative;">
+                        <h1 style="color: white; margin: 0; font-size: 32px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">Agro Smart Benue</h1>
+                        <p style="color: rgba(255,255,255,0.9); margin: 12px 0 0 0; font-size: 15px;">Empowering Farmers, Growing Communities</p>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 40px 35px;">
+                        <div style="text-align: center; margin-bottom: 30px;">
+                            <div style="display: inline-block; background: linear-gradient(135deg, #dcfce7 0%%, #bbf7d0 100%%); padding: 15px; border-radius: 50%%; margin-bottom: 20px;">
+                                <span style="font-size: 40px;">🔐</span>
+                            </div>
+                            <h2 style="color: #16a34a; margin: 0 0 10px 0; font-size: 26px; font-weight: 700;">Verification Code</h2>
+                            <p style="color: #6b7280; font-size: 15px; margin: 0;">Enter this code to verify your email</p>
+                        </div>
+                        
+                        <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">Hi <strong style="color: #16a34a;">%s</strong>,</p>
+                        <p style="color: #4b5563; font-size: 15px; line-height: 1.7; margin: 0 0 30px 0;">Use the verification code below to complete your registration. This code is unique to you and should not be shared with anyone.</p>
+                        
+                        <div style="background: linear-gradient(135deg, #f0fdf4 0%%, #dcfce7 100%%); padding: 30px; text-align: center; margin: 30px 0; border-radius: 12px; border: 3px dashed #16a34a; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.1);">
+                            <p style="color: #15803d; font-size: 14px; font-weight: 600; margin: 0 0 15px 0; text-transform: uppercase; letter-spacing: 1px;">Your Verification Code</p>
+                            <h1 style="color: #16a34a; font-size: 48px; letter-spacing: 8px; margin: 0; font-weight: 800; text-shadow: 0 2px 4px rgba(22, 163, 74, 0.1);">%s</h1>
+                        </div>
+                        
+                        <div style="background: linear-gradient(135deg, #fef3c7 0%%, #fde68a 100%%); border-left: 4px solid #f59e0b; padding: 15px 20px; border-radius: 8px; margin: 30px 0;">
+                            <p style="color: #92400e; font-size: 14px; margin: 0; line-height: 1.6;">
+                                <strong>⏰ Expires in 10 minutes</strong><br>
+                                Please enter this code promptly to complete your verification.
+                            </p>
+                        </div>
+                        
+                        <div style="background: linear-gradient(135deg, #fee2e2 0%%, #fecaca 100%%); border-left: 4px solid #dc2626; padding: 15px 20px; border-radius: 8px; margin: 20px 0 0 0;">
+                            <p style="color: #991b1b; font-size: 13px; margin: 0; line-height: 1.6;">
+                                <strong>🔒 Security Notice:</strong> If you didn't request this code, please ignore this email. Your account remains secure.
+                            </p>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="background: linear-gradient(135deg, #f9fafb 0%%, #f3f4f6 100%%); padding: 30px 35px; border-top: 1px solid #e5e7eb;">
+                        <p style="color: #9ca3af; font-size: 13px; text-align: center; margin: 0 0 10px 0; line-height: 1.6;">
+                            Best regards,<br>
+                            <strong style="color: #16a34a;">The Agro Smart Benue Team</strong>
+                        </p>
+                        <p style="color: #d1d5db; font-size: 11px; text-align: center; margin: 15px 0 0 0;">
+                            © 2024 Agro Smart Benue. All rights reserved.
+                        </p>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """.formatted(firstName, otp);
+    }
+
     private String buildPasswordResetOTPEmailTemplate(String firstName, String otp) {
-        return "<!DOCTYPE html>" +
-                "<html>" +
-                "<head><meta charset='UTF-8'><title>Password Reset Code</title></head>" +
-                "<body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>" +
-                "<div style='max-width: 600px; margin: 0 auto; padding: 20px;'>" +
-                "<h2 style='color: #2c3e50;'>Password Reset Request</h2>" +
-                "<p>Hi " + firstName + ",</p>" +
-                "<p>We received a request to reset your password. Please use the following 6-digit code to proceed:</p>" +
-                "<div style='text-align: center; margin: 30px 0;'>" +
-                "<div style='background-color: #fff3cd; border: 2px solid #ffc107; border-radius: 10px; padding: 20px; display: inline-block;'>" +
-                "<span style='font-size: 32px; font-weight: bold; color: #856404; letter-spacing: 8px;'>" + otp + "</span>" +
-                "</div>" +
-                "</div>" +
-                "<p style='color: #7f8c8d; font-size: 14px;'><strong>Important:</strong></p>" +
-                "<ul style='color: #7f8c8d; font-size: 14px;'>" +
-                "<li>This code will expire in 10 minutes</li>" +
-                "<li>You have 5 attempts to enter the correct code</li>" +
-                "<li>If you didn't request this password reset, please ignore this email</li>" +
-                "<li>For security reasons, do not share this code with anyone</li>" +
-                "</ul>" +
-                "<p>If you're having trouble, you can request a new password reset code from the app.</p>" +
-                "<p>Best regards,<br>Original Invoice Team</p>" +
-                "</div>" +
-                "</body>" +
-                "</html>";
+        return """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #fef2f2 0%%, #fee2e2 100%%); padding: 40px 20px;">
+            <table cellpadding="0" cellspacing="0" border="0" width="100%%" style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">
+                <tr>
+                    <td style="background: linear-gradient(135deg, #dc2626 0%%, #b91c1c 100%%); padding: 40px 30px; text-align: center; position: relative;">
+                        <h1 style="color: white; margin: 0; font-size: 32px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">Agro Smart Benue</h1>
+                        <p style="color: rgba(255,255,255,0.9); margin: 12px 0 0 0; font-size: 15px;">Empowering Farmers, Growing Communities</p>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 40px 35px;">
+                        <div style="text-align: center; margin-bottom: 30px;">
+                            <div style="display: inline-block; background: linear-gradient(135deg, #fee2e2 0%%, #fecaca 100%%); padding: 15px; border-radius: 50%%; margin-bottom: 20px;">
+                                <span style="font-size: 40px;">🔑</span>
+                            </div>
+                            <h2 style="color: #dc2626; margin: 0 0 10px 0; font-size: 26px; font-weight: 700;">Password Reset</h2>
+                            <p style="color: #6b7280; font-size: 15px; margin: 0;">Secure your account with a new password</p>
+                        </div>
+                        
+                        <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">Hi <strong style="color: #dc2626;">%s</strong>,</p>
+                        <p style="color: #4b5563; font-size: 15px; line-height: 1.7; margin: 0 0 30px 0;">We received a request to reset your password. Use the verification code below to proceed with resetting your password. This code is unique and should be kept confidential.</p>
+                        
+                        <div style="background: linear-gradient(135deg, #fef2f2 0%%, #fee2e2 100%%); padding: 30px; text-align: center; margin: 30px 0; border-radius: 12px; border: 3px dashed #dc2626; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.1);">
+                            <p style="color: #b91c1c; font-size: 14px; font-weight: 600; margin: 0 0 15px 0; text-transform: uppercase; letter-spacing: 1px;">Password Reset Code</p>
+                            <h1 style="color: #dc2626; font-size: 48px; letter-spacing: 8px; margin: 0; font-weight: 800; text-shadow: 0 2px 4px rgba(220, 38, 38, 0.1);">%s</h1>
+                        </div>
+                        
+                        <div style="background: linear-gradient(135deg, #fef3c7 0%%, #fde68a 100%%); border-left: 4px solid #f59e0b; padding: 15px 20px; border-radius: 8px; margin: 30px 0;">
+                            <p style="color: #92400e; font-size: 14px; margin: 0; line-height: 1.6;">
+                                <strong>⏰ Expires in 10 minutes</strong><br>
+                                Please use this code promptly to reset your password.
+                            </p>
+                        </div>
+                        
+                        <div style="background: linear-gradient(135deg, #fee2e2 0%%, #fecaca 100%%); border-left: 4px solid #dc2626; padding: 15px 20px; border-radius: 8px; margin: 20px 0 0 0;">
+                            <p style="color: #991b1b; font-size: 13px; margin: 0; line-height: 1.6;">
+                                <strong>🔒 Security Alert:</strong> If you didn't request a password reset, please ignore this email. Your password will remain unchanged and your account is secure.
+                            </p>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="background: linear-gradient(135deg, #f9fafb 0%%, #f3f4f6 100%%); padding: 30px 35px; border-top: 1px solid #e5e7eb;">
+                        <p style="color: #9ca3af; font-size: 13px; text-align: center; margin: 0 0 10px 0; line-height: 1.6;">
+                            Best regards,<br>
+                            <strong style="color: #dc2626;">The Agro Smart Benue Team</strong>
+                        </p>
+                        <p style="color: #d1d5db; font-size: 11px; text-align: center; margin: 15px 0 0 0;">
+                            © 2024 Agro Smart Benue. All rights reserved.
+                        </p>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """.formatted(firstName, otp);
     }
 
     private String buildWelcomeEmailBody(String name) {
-        return "<html>" +
-                "<body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>" +
-                "<div style='max-width: 600px; margin: 0 auto; padding: 20px;'>" +
-                "<h2 style='color: #2c3e50;'>Hello, " + name + "!</h2>" +
-                "<p>We are excited to have you onboard at Original Invoice. Get ready to explore amazing features!</p>" +
-                "<p>You can now:</p>" +
-                "<ul>" +
-                "<li>Generate invoices for your clients</li>" +
-                "<li>Track payments</li>" +
-                "<li>Connect with sellers directly</li>" +
-                "</ul>" +
-                "<p>If you have any questions, feel free to reach out to our support team.</p>" +
-                "<br>" +
-                "<p>Best Regards,</p>" +
-                "<p><b>Original Invoice Support Team</b></p>" +
-                "</div>" +
-                "</body>" +
-                "</html>";
+        return """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #f5f7fa 0%%, #c3cfe2 100%%); padding: 40px 20px;">
+            <table cellpadding="0" cellspacing="0" border="0" width="100%%" style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">
+                <tr>
+                    <td style="background: linear-gradient(135deg, #16a34a 0%%, #15803d 100%%); padding: 40px 30px; text-align: center; position: relative;">
+                        <h1 style="color: white; margin: 0; font-size: 32px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">Agro Smart Benue</h1>
+                        <p style="color: rgba(255,255,255,0.9); margin: 12px 0 0 0; font-size: 15px;">Empowering Farmers, Growing Communities</p>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 40px 35px;">
+                        <div style="text-align: center; margin-bottom: 30px;">
+                            <div style="display: inline-block; background: linear-gradient(135deg, #dcfce7 0%%, #bbf7d0 100%%); padding: 15px; border-radius: 50%%; margin-bottom: 20px;">
+                                <span style="font-size: 40px;">🎉</span>
+                            </div>
+                            <h2 style="color: #16a34a; margin: 0 0 10px 0; font-size: 26px; font-weight: 700;">Welcome Aboard!</h2>
+                            <p style="color: #6b7280; font-size: 15px; margin: 0;">Your journey with us begins now</p>
+                        </div>
+                        
+                        <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">Hello <strong style="color: #16a34a;">%s</strong>,</p>
+                        <p style="color: #4b5563; font-size: 15px; line-height: 1.7; margin: 0 0 30px 0;">Welcome to Agro Smart Benue! We're thrilled to have you join our agricultural community. Your account is now verified and ready to use.</p>
+                        
+                        <div style="background: linear-gradient(135deg, #f0fdf4 0%%, #dcfce7 100%%); padding: 25px; border-radius: 12px; margin: 30px 0; border: 2px solid #16a34a;">
+                            <h3 style="color: #16a34a; margin: 0 0 20px 0; font-size: 18px; font-weight: 700;">🚀 What you can do now:</h3>
+                            <table cellpadding="0" cellspacing="0" border="0" width="100%%">
+                                <tr>
+                                    <td style="padding: 8px 0;">
+                                        <span style="color: #16a34a; font-size: 18px; margin-right: 10px;">🌾</span>
+                                        <span style="color: #374151; font-size: 14px;">Browse agricultural products</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0;">
+                                        <span style="color: #16a34a; font-size: 18px; margin-right: 10px;">🛒</span>
+                                        <span style="color: #374151; font-size: 14px;">Place orders directly from farmers</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0;">
+                                        <span style="color: #16a34a; font-size: 18px; margin-right: 10px;">🤝</span>
+                                        <span style="color: #374151; font-size: 14px;">Connect with sellers and buyers</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0;">
+                                        <span style="color: #16a34a; font-size: 18px; margin-right: 10px;">📚</span>
+                                        <span style="color: #374151; font-size: 14px;">Get information about best farming practices</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0;">
+                                        <span style="color: #16a34a; font-size: 18px; margin-right: 10px;">🌤️</span>
+                                        <span style="color: #374151; font-size: 14px;">Access weather forecasts for your area</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 8px 0;">
+                                        <span style="color: #16a34a; font-size: 18px; margin-right: 10px;">📊</span>
+                                        <span style="color: #374151; font-size: 14px;">View market prices and trends</span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                        <div style="text-align: center; margin: 35px 0;">
+                            <a href="https://bfpc.vercel.app/dashboard" style="background: linear-gradient(135deg, #16a34a 0%%, #15803d 100%%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);">
+                                🏠 Go to Dashboard
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="background: linear-gradient(135deg, #f9fafb 0%%, #f3f4f6 100%%); padding: 30px 35px; border-top: 1px solid #e5e7eb;">
+                        <p style="color: #9ca3af; font-size: 13px; text-align: center; margin: 0 0 10px 0; line-height: 1.6;">
+                            Best regards,<br>
+                            <strong style="color: #16a34a;">The Agro Smart Benue Support Team</strong>
+                        </p>
+                        <p style="color: #d1d5db; font-size: 11px; text-align: center; margin: 15px 0 0 0;">
+                            © 2024 Agro Smart Benue. All rights reserved.
+                        </p>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """.formatted(name);
     }
 }
