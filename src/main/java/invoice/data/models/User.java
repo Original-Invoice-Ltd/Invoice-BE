@@ -33,7 +33,6 @@ public class User {
     @Enumerated(STRING)
     private Set<Role> roles;
     private boolean isVerified;
-    private String phone;
     private String mediaUrl;
     @Column(nullable = false)
     private String password;
