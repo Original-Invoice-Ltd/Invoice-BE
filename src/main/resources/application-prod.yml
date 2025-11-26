@@ -48,3 +48,17 @@ server:
 rsa:
   public-key: classpath:keys/publicKey.pem
   private-key: classpath:keys/privateKey.pem
+
+springdoc:
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui
+  api-docs:
+    path: /api-docs
+  info:
+    title: Original-Invoice
+    description: Original Invoice APIs
+    version: 1.0.0
+    contact:
+      name: Joseph
+      email: ajaditaoreed@gmail.com
