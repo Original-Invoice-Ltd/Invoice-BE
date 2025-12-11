@@ -16,13 +16,11 @@ public class InvoiceSender {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String name;
+    private String fullName;
     private String email;
-    private String address;
-    private String cityAndState;
-    private String country;
+    private String address;//optional
     private String phone;
-    private String businessNumber;
+    private String businessName;
     @ManyToOne
     @JoinColumn(name = "invoice_id")
     private Invoice invoice;
