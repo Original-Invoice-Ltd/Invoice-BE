@@ -1,14 +1,17 @@
 package invoice.services;
 
 import invoice.dtos.request.CreateInvoiceRequest;
-import invoice.dtos.response.CreateInvoiceResponse;
+import invoice.dtos.response.InvoiceResponse;
 
 import java.util.List;
+import java.util.UUID;
 
 public interface InvoiceService {
-    CreateInvoiceResponse createInvoice(CreateInvoiceRequest request);
-    CreateInvoiceResponse getInvoiceById(Long id);
-    List<CreateInvoiceResponse> getAllInvoices();
-    CreateInvoiceResponse updateInvoice(Long id, CreateInvoiceRequest request);
-    void deleteInvoice(Long id);
+    InvoiceResponse createInvoice(CreateInvoiceRequest request);
+    InvoiceResponse getInvoiceById(UUID id);
+    List<InvoiceResponse> getAllUserInvoices();
+    InvoiceResponse updateInvoice(UUID id, CreateInvoiceRequest request);
+    void deleteInvoice(UUID id);
+
+    List<InvoiceResponse> getAllInvoices();
 }

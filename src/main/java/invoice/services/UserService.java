@@ -9,6 +9,7 @@ import jakarta.mail.MessagingException;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.UnsupportedEncodingException;
+import java.util.UUID;
 
 public interface UserService {
     void resendVerificationEmail(String email) throws MessagingException, UnsupportedEncodingException;
@@ -18,12 +19,12 @@ public interface UserService {
 
     boolean isUserVerified(String email);
 
-    boolean existsById(Long userId);
+    boolean existsById(UUID userId);
     boolean existsByEmail(String email);
 
-    String deleteUser(Long id);
+    String deleteUser(UUID id);
 
-    String disableUser(Long id);
+    String disableUser(UUID id);
 
     String registerAdmin(SignUpRequest request);
 
@@ -32,7 +33,7 @@ public interface UserService {
     String uploadPhoto(String email, MultipartFile image);
     // Profile-related methods
     User getUserByEmail(String email);
-    Long getUserIdByEmail(String email);
+    UUID getUserIdByEmail(String email);
 
     String activate(String email);
 
