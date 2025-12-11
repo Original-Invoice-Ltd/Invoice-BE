@@ -16,6 +16,7 @@ import invoice.security.config.RsaKeyProperties;
 import invoice.security.data.models.SecureUser;
 import invoice.security.services.AuthService;
 import invoice.services.UserService;
+import invoice.utiils.CookieUtils;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -40,6 +41,7 @@ import java.util.Map;
 import static invoice.security.utils.SecurityUtils.JWT_PREFIX;
 import static java.time.LocalDateTime.now;
 import static java.time.temporal.ChronoUnit.HOURS;
+import static java.time.temporal.ChronoUnit.MINUTES;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
@@ -58,11 +60,61 @@ public class AuthController {
     private final UserRepository userRepository;
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@RequestHeader(AUTHORIZATION) String token) {
-        token = token.replace(JWT_PREFIX, "").strip();
-        authService.blacklist(token);
+    public ResponseEntity<Void> logout(@CookieValue(name = "accessToken", required = false) String accessToken) {
+        if (accessToken != null) {
+            authService.blacklist(accessToken);
+        }
         SecurityContextHolder.clearContext();
+        
+        // Clear cookies
+        response.addCookie(CookieUtils.deleteAccessTokenCookie());
+        response.addCookie(CookieUtils.deleteRefreshTokenCookie());
+        
         return ResponseEntity.noContent().build();
+    }
+    
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refreshToken(@CookieValue(name = "refreshToken", required = false) String refreshToken) {
+        try {
+            if (refreshToken == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Refresh token not found"));
+            }
+            
+            // Verify refresh token
+            Algorithm algorithm = Algorithm.RSA512(rsaKeys.publicKey(), rsaKeys.privateKey());
+            var verifier = JWT.require(algorithm)
+                    .withIssuer("OriginalInvoiceRefreshToken")
+                    .build();
+            
+            var decodedJWT = verifier.verify(refreshToken);
+            String email = decodedJWT.getSubject();
+            
+            // Load user and create new authentication
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new BusinessException("User not found"));
+            
+            // Create authentication object for token generation
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(email, user.getPassword())
+            );
+            
+            // Generate new access token
+            String newAccessToken = generateAccessToken(authentication);
+            
+            // Set new access token cookie
+            response.addCookie(CookieUtils.createAccessTokenCookie(newAccessToken));
+            
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Token refreshed successfully"
+            ));
+            
+        } catch (Exception e) {
+            log.error("Token refresh failed: ", e);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Invalid or expired refresh token"));
+        }
     }
 
     @PostMapping("/login")
@@ -90,11 +142,18 @@ public class AuthController {
             );
 
             SecureUser userDetails = (SecureUser) authentication.getPrincipal();
-            String token = generateToken(authentication);
+            
+            // Generate access token (15 minutes)
+            String accessToken = generateAccessToken(authentication);
+            
+            // Generate refresh token (30 days)
+            String refreshToken = generateRefreshToken(authentication);
 
-            Cookie cookie = createCookie(token);
-            response.addCookie(cookie);
+            // Set tokens as HTTP-only secure cookies
+            response.addCookie(CookieUtils.createAccessTokenCookie(accessToken));
+            response.addCookie(CookieUtils.createRefreshTokenCookie(refreshToken));
 
+            // Return response WITHOUT tokens in body
             LoginResponse loginResponse = LoginResponse.builder()
                     .responseTime(now())
                     .message("Login successful")
@@ -102,7 +161,6 @@ public class AuthController {
                     .email(userDetails.getUsername())
                     .mediaUrl(userDetails.getMediaUrl())
                     .roles(userDetails.getRoles())
-                    .token(token)
                     .build();
 
             return ResponseEntity.ok(new OriginalInvoiceApiResponse<>(true, loginResponse));
@@ -127,19 +185,35 @@ public class AuthController {
         }
     }
 
-    private String generateToken(Authentication authentication) {
+    private String generateAccessToken(Authentication authentication) {
         Algorithm algorithm = Algorithm.RSA512(rsaKeys.publicKey(), rsaKeys.privateKey());
         Instant now = Instant.now();
         UserDetails principal = (UserDetails) authentication.getPrincipal();
 
         return JWT.create()
-                .withIssuer("OriginalInvoiceAuthToken")
+                .withIssuer("OriginalInvoiceAccessToken")
                 .withIssuedAt(now)
-                .withExpiresAt(now.plus(24, HOURS))
+                .withExpiresAt(now.plus(15, MINUTES))
                 .withSubject(principal.getUsername())
                 .withClaim("principal", principal.getUsername())
                 .withClaim("credentials", authentication.getCredentials().toString())
                 .withArrayClaim("roles", extractAuthorities(authentication.getAuthorities()))
+                .withClaim("type", "access")
+                .sign(algorithm);
+    }
+    
+    private String generateRefreshToken(Authentication authentication) {
+        Algorithm algorithm = Algorithm.RSA512(rsaKeys.publicKey(), rsaKeys.privateKey());
+        Instant now = Instant.now();
+        UserDetails principal = (UserDetails) authentication.getPrincipal();
+
+        return JWT.create()
+                .withIssuer("OriginalInvoiceRefreshToken")
+                .withIssuedAt(now)
+                .withExpiresAt(now.plus(30, java.time.temporal.ChronoUnit.DAYS))
+                .withSubject(principal.getUsername())
+                .withClaim("principal", principal.getUsername())
+                .withClaim("type", "refresh")
                 .sign(algorithm);
     }
 
@@ -147,15 +221,6 @@ public class AuthController {
         return authorities.stream()
                 .map(GrantedAuthority::getAuthority)
                 .toArray(String[]::new);
-    }
-
-    private static Cookie createCookie(String token) {
-        Cookie cookie = new Cookie("OriginalInvoiceAuthToken", token);
-        cookie.setHttpOnly(true);
-        cookie.setPath("/");
-        cookie.setMaxAge(86400);
-        cookie.setSecure(true);
-        return cookie;
     }
 
 

@@ -1,6 +1,6 @@
 spring:
   config:
-    import: secret.yml
+    import: secrets.properties
   servlet:
     multipart:
       enabled: true
@@ -43,16 +43,25 @@ rsa:
   public-key: classpath:keys/publicKey.pem
   private-key: classpath:keys/privateKey.pem
 
-  springdoc:
-  swagger-ui:
-    enabled: true
-    path: /swagger-ui
-  api-docs:
-    path: /api-docs
-  info:
-    title: Original-Invoice
-    description: Original Invoice APIs
-    version: 1.0.0
-    contact:
-      name: Joseph
-      email: ajaditaoreed@gmail.com
+oauth:
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:88808125964-1d4iq8m3v51fgfp99bo0ek7hst1np2u7.apps.googleusercontent.com}
+    client-secret: ${GOOGLE_CLIENT_SECRET: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}
+    redirect-uri: ${GOOGLE_REDIRECT_URI:http://localhost:8089/oauth/google/callback}
+    scope: openid email profile
+  apple:
+    client-id: ${APPLE_CLIENT_ID:your-apple-client-id}
+    team-id: ${APPLE_TEAM_ID:your-apple-team-id}
+    key-id: ${APPLE_KEY_ID:your-apple-key-id}
+    private-key-path: ${APPLE_PRIVATE_KEY_PATH:classpath:apple-private-key.p8}
+    redirect-uri: ${APPLE_REDIRECT_URI:http://localhost:8089/oauth/apple/callback}
+
+app:
+  frontend:
+    dashboard-url: ${FRONTEND_DASHBOARD_URL:http://localhost:3000/dashboard/overview}
+
+paystack:
+  api:
+    url: https://api.paystack.co
+    secret:
+      key: ${PAYSTACK_SECRET_KEY}

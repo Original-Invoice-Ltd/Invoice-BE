@@ -8,12 +8,13 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 @Setter
 @Getter
 @AllArgsConstructor
 public class UserResponse {
-    private Long id;
+    private UUID id;
     private String fullName;
     private String email;
     private LocalDateTime createdAt;

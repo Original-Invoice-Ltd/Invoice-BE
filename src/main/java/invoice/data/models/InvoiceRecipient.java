@@ -21,7 +21,4 @@ public class InvoiceRecipient {
     private String businessNumber;
     private String fax;
     private String address;
-    @ManyToOne
-    @JoinColumn(name = "invoice_id")
-    private Invoice invoice;
 }
