@@ -2,7 +2,6 @@ package invoice.services.implementation;
 
 import com.cloudinary.Cloudinary;
 import invoice.data.constants.Role;
-import invoice.data.constants.UserStatus;
 import invoice.data.models.User;
 import invoice.data.models.VerificationToken;
 import invoice.data.repositories.UserRepository;
@@ -19,7 +18,6 @@ import invoice.services.UserService;
 import jakarta.mail.MessagingException;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.modelmapper.ModelMapper;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -27,10 +25,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.UnsupportedEncodingException;
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Optional;
+import java.util.UUID;
 
 import static invoice.data.constants.Role.ADMIN;
 import static invoice.data.constants.UserStatus.*;
@@ -156,7 +154,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public boolean existsById(Long userId) {
+    public boolean existsById(UUID userId) {
         return userRepository.existsById(userId);
     }
 
@@ -166,7 +164,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public String deleteUser(Long id) {
+    public String deleteUser(UUID id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
         tokenRepository.findByUser(user).ifPresent(tokenRepository::delete);
@@ -176,7 +174,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public String disableUser(Long id) {
+    public String disableUser(UUID id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
         user.setStatus(INACTIVE);
@@ -229,7 +227,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Long getUserIdByEmail(String email) {
+    public UUID getUserIdByEmail(String email) {
         User user = getUserByEmail(email);
         return user.getId();
     }
