@@ -62,6 +62,7 @@ public class Invoice {
     private List<InvoiceItem> items = new ArrayList<>();
     
     private Double subtotal;
+    private Double totalTaxAmount; // Total of all taxes applied
     private Double totalDue;
     private String note;
     private String termsAndConditions;
@@ -75,5 +76,33 @@ public class Invoice {
     public void removeItem(InvoiceItem item) {
         items.remove(item);
         item.setInvoice(null);
+    }
+    
+    /**
+     * Calculate total tax amount for all items in this invoice
+     */
+    public Double calculateTotalTaxAmount() {
+        return items.stream()
+                .mapToDouble(item -> item.getTotalTaxAmount().doubleValue())
+                .sum();
+    }
+    
+    /**
+     * Calculate subtotal (sum of all item amounts without tax)
+     */
+    public Double calculateSubtotal() {
+        return items.stream()
+                .mapToDouble(item -> item.getAmount() != null ? item.getAmount().doubleValue() : 0.0)
+                .sum();
+    }
+    
+    /**
+     * Calculate total due (subtotal + taxes - discount)
+     */
+    public Double calculateTotalDue() {
+        double calculatedSubtotal = calculateSubtotal();
+        double calculatedTaxAmount = calculateTotalTaxAmount();
+        double discountAmount = discount != null ? discount : 0.0;
+        return calculatedSubtotal + calculatedTaxAmount - discountAmount;
     }
 }

@@ -45,9 +45,9 @@ rsa:
 
 oauth:
   google:
-    client-id: ${GOOGLE_CLIENT_ID:88808125964-1d4iq8m3v51fgfp99bo0ek7hst1np2u7.apps.googleusercontent.com}
-    client-secret: ${GOOGLE_CLIENT_SECRET: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}
-    redirect-uri: ${GOOGLE_REDIRECT_URI:http://localhost:8089/oauth/google/callback}
+    client-id: ${GOOGLE_CLIENT_ID}
+    client-secret: ${GOOGLE_CLIENT_SECRET}
+    redirect-uri: ${GOOGLE_REDIRECT_URI}
     scope: openid email profile
   apple:
     client-id: ${APPLE_CLIENT_ID:your-apple-client-id}
@@ -58,7 +58,7 @@ oauth:
 
 app:
   frontend:
-    dashboard-url: ${FRONTEND_DASHBOARD_URL:http://localhost:3000/dashboard/overview}
+    dashboard-url: ${FRONTEND_DASHBOARD_URL}
 
 paystack:
   api:

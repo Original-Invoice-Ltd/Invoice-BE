@@ -1,17 +1,20 @@
 package invoice.services.implementation;
 
 import invoice.data.constants.Item_Category;
+import invoice.data.models.Client;
 import invoice.data.models.Invoice;
 import invoice.data.models.InvoiceItem;
-import invoice.data.models.Tax;
+import invoice.data.models.InvoiceItemTax;
+import invoice.data.repositories.ClientRepository;
 import invoice.data.repositories.InvoiceItemRepository;
 import invoice.data.repositories.InvoiceRepository;
-import invoice.data.repositories.TaxRepository;
 import invoice.dtos.request.InvoiceItemRequest;
 import invoice.dtos.response.InvoiceItemResponse;
 import invoice.exception.ResourceNotFoundException;
 import invoice.services.InvoiceItemService;
+import invoice.services.TaxCalculationService;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,17 +24,22 @@ import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class InvoiceItemServiceImpl implements InvoiceItemService {
 
     private final InvoiceItemRepository invoiceItemRepository;
     private final InvoiceRepository invoiceRepository;
-    private final TaxRepository taxRepository;
+    private final ClientRepository clientRepository;
+    private final TaxCalculationService taxCalculationService;
 
     @Override
     @Transactional
     public InvoiceItemResponse addItemToInvoice(UUID invoiceId, InvoiceItemRequest request) {
         Invoice invoice = invoiceRepository.findById(invoiceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Invoice not found"));
+        
+        Client client = clientRepository.findById(invoice.getClientId())
+                .orElseThrow(() -> new ResourceNotFoundException("Client not found"));
 
         InvoiceItem item = new InvoiceItem();
         item.setItemName(request.getItemName());
@@ -40,15 +48,27 @@ public class InvoiceItemServiceImpl implements InvoiceItemService {
         item.setQuantity(request.getQuantity());
         item.setRate(request.getRate());
         item.setAmount(request.getAmount());
-        item.setTax(request.getTax());
+        item.setTax(request.getTax()); // Legacy field
 
+        // Calculate and apply taxes
         if (request.getTaxIds() != null && !request.getTaxIds().isEmpty()) {
-            List<Tax> taxes = taxRepository.findAllById(request.getTaxIds());
-            item.setTaxes(taxes);
+            List<InvoiceItemTax> itemTaxes = taxCalculationService.calculateItemTaxes(
+                item, request.getTaxIds(), client.getCustomerType());
+            
+            for (InvoiceItemTax itemTax : itemTaxes) {
+                item.addItemTax(itemTax);
+            }
         }
 
         invoice.addItem(item);
+        
+        // Update invoice totals
+        updateInvoiceTotals(invoice);
+        
         invoiceRepository.save(invoice);
+
+        log.info("Added item '{}' to invoice {} with {} taxes applied", 
+                item.getItemName(), invoiceId, item.getItemTaxes().size());
 
         return new InvoiceItemResponse(item);
     }
@@ -58,21 +78,36 @@ public class InvoiceItemServiceImpl implements InvoiceItemService {
     public InvoiceItemResponse updateInvoiceItem(Long itemId, InvoiceItemRequest request) {
         InvoiceItem item = invoiceItemRepository.findById(itemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Invoice item not found"));
+        
+        Invoice invoice = item.getInvoice();
+        Client client = clientRepository.findById(invoice.getClientId())
+                .orElseThrow(() -> new ResourceNotFoundException("Client not found"));
 
+        // Update basic item properties
         item.setItemName(request.getItemName());
         item.setCategory(request.getCategory() != null ? Item_Category.valueOf(request.getCategory()) : null);
         item.setDescription(request.getDescription());
         item.setQuantity(request.getQuantity());
         item.setRate(request.getRate());
         item.setAmount(request.getAmount());
-        item.setTax(request.getTax());
+        item.setTax(request.getTax()); // Legacy field
 
+        // Recalculate taxes
         if (request.getTaxIds() != null) {
-            List<Tax> taxes = taxRepository.findAllById(request.getTaxIds());
-            item.setTaxes(taxes);
+            taxCalculationService.recalculateItemTaxes(item, request.getTaxIds(), client.getCustomerType());
+        } else {
+            // Clear all taxes if no tax IDs provided
+            item.getItemTaxes().clear();
         }
 
+        // Update invoice totals
+        updateInvoiceTotals(invoice);
+        
         InvoiceItem updated = invoiceItemRepository.save(item);
+        
+        log.info("Updated item '{}' with {} taxes applied", 
+                updated.getItemName(), updated.getItemTaxes().size());
+
         return new InvoiceItemResponse(updated);
     }
 
@@ -84,7 +119,13 @@ public class InvoiceItemServiceImpl implements InvoiceItemService {
         
         Invoice invoice = item.getInvoice();
         invoice.removeItem(item);
+        
+        // Update invoice totals
+        updateInvoiceTotals(invoice);
+        
         invoiceRepository.save(invoice);
+        
+        log.info("Deleted item '{}' from invoice {}", item.getItemName(), invoice.getId());
     }
 
     @Override
@@ -100,5 +141,26 @@ public class InvoiceItemServiceImpl implements InvoiceItemService {
         InvoiceItem item = invoiceItemRepository.findById(itemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Invoice item not found"));
         return new InvoiceItemResponse(item);
+    }
+    
+    private void updateInvoiceTotals(Invoice invoice) {
+        try {
+            Double subtotal = invoice.calculateSubtotal();
+            Double totalTaxAmount = invoice.calculateTotalTaxAmount();
+            Double totalDue = invoice.calculateTotalDue();
+            
+            invoice.setSubtotal(subtotal);
+            invoice.setTotalTaxAmount(totalTaxAmount);
+            invoice.setTotalDue(totalDue);
+            
+            log.debug("Updated invoice totals - Subtotal: {}, Tax: {}, Total: {}", 
+                    subtotal, totalTaxAmount, totalDue);
+        } catch (Exception e) {
+            log.error("Error updating invoice totals for invoice {}: {}", invoice.getId(), e.getMessage());
+            // Set safe defaults
+            invoice.setSubtotal(0.0);
+            invoice.setTotalTaxAmount(0.0);
+            invoice.setTotalDue(0.0);
+        }
     }
 }
