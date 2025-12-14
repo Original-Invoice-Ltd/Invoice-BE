@@ -1,6 +1,7 @@
 package invoice.services.implementation;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -10,6 +11,7 @@ import java.util.regex.Pattern;
 import invoice.data.models.*;
 import invoice.data.repositories.*;
 import invoice.dtos.response.ClientResponse;
+import invoice.dtos.response.InvoiceItemResponse;
 import invoice.dtos.response.InvoiceResponse;
 import invoice.dtos.response.InvoiceSenderResponse;
 import invoice.exception.ResourceNotFoundException;
@@ -99,13 +101,57 @@ public class InvoiceServiceImplementation implements InvoiceService {
         return mapToResponse(savedInvoice, client, sender);
     }
 
-    private  InvoiceResponse mapToResponse(Invoice savedInvoice, Client client, InvoiceSender sender) {
+    private InvoiceResponse mapToResponse(Invoice savedInvoice, Client client, InvoiceSender sender) {
         InvoiceResponse response = new InvoiceResponse(savedInvoice);
-//        List<Tax> taxes = savedInvoice.getItems().stream().map(item -> item.getTax()).toList();
-        ClientResponse billTo = new ClientResponse(client);
-        InvoiceSenderResponse billFrom = new InvoiceSenderResponse(sender);
-        response.setBillTo(billTo);
-        response.setBillFrom(billFrom);
+        
+        try {
+            // Safe mapping for client
+            if (client != null) {
+                ClientResponse billTo = new ClientResponse(client);
+                response.setBillTo(billTo);
+            }
+            
+            // Safe mapping for sender
+            if (sender != null) {
+                InvoiceSenderResponse billFrom = new InvoiceSenderResponse(sender);
+                response.setBillFrom(billFrom);
+            }
+            
+            // Safe mapping for items with taxes
+            if (savedInvoice.getItems() != null) {
+                List<InvoiceItemResponse> itemResponses = savedInvoice.getItems().stream()
+                        .map(item -> {
+                            try {
+                                return new InvoiceItemResponse(item);
+                            } catch (Exception e) {
+                                log.error("Error mapping item {}: {}", item.getId(), e.getMessage());
+                                // Return a safe default item response
+                                InvoiceItemResponse safeResponse = new InvoiceItemResponse();
+                                safeResponse.setId(item.getId());
+                                safeResponse.setItemName(item.getItemName() != null ? item.getItemName() : "");
+                                safeResponse.setAmount(item.getAmount() != null ? item.getAmount() : BigDecimal.ZERO);
+                                safeResponse.setTotalTaxAmount(BigDecimal.ZERO);
+                                safeResponse.setAmountWithTax(item.getAmount() != null ? item.getAmount() : BigDecimal.ZERO);
+                                return safeResponse;
+                            }
+                        })
+                        .collect(Collectors.toList());
+                response.setItems(itemResponses);
+            }
+            
+            // Safe mapping for totals
+            response.setSubtotal(savedInvoice.getSubtotal() != null ? savedInvoice.getSubtotal() : 0.0);
+            response.setTotalTaxAmount(savedInvoice.getTotalTaxAmount() != null ? savedInvoice.getTotalTaxAmount() : 0.0);
+            response.setTotalDue(savedInvoice.getTotalDue() != null ? savedInvoice.getTotalDue() : 0.0);
+            
+        } catch (Exception e) {
+            log.error("Error mapping invoice response for invoice {}: {}", savedInvoice.getId(), e.getMessage());
+            // Ensure response has safe defaults
+            if (response.getSubtotal() == null) response.setSubtotal(0.0);
+            if (response.getTotalTaxAmount() == null) response.setTotalTaxAmount(0.0);
+            if (response.getTotalDue() == null) response.setTotalDue(0.0);
+        }
+        
         return response;
     }
 
