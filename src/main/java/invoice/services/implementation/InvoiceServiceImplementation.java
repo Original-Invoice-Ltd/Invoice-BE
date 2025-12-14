@@ -11,6 +11,7 @@ import java.util.regex.Pattern;
 import invoice.data.models.*;
 import invoice.data.repositories.*;
 import invoice.dtos.response.ClientResponse;
+import invoice.dtos.response.InvoiceItemResponse;
 import invoice.dtos.response.InvoiceResponse;
 import invoice.dtos.response.InvoiceSenderResponse;
 import invoice.exception.ResourceNotFoundException;
