@@ -49,8 +49,11 @@ public class SecurityConfig {
         // Allow Next.js frontend origins
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:3000",
-                "http://localhost:3001",
-                "https://yourdomain.com" // Add your production domain
+                "http://localhost:3001", 
+                "http://localhost:3002",
+                "http://localhost:5173", // Vite default
+                "https://originalinvoice.com", // Add your production domain
+                "https://dev.originalinvoice.com"
         ));
         
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
