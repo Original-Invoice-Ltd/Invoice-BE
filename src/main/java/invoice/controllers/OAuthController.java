@@ -78,6 +78,10 @@ public class OAuthController {
             String accessToken = generateAccessToken(authentication);
             String refreshToken = generateRefreshToken(authentication);
             
+            // Update user's current token for session validation
+            user.setCurrentToken(accessToken);
+            userRepository.save(user);
+            
             // Set cookies
             response.addCookie(CookieUtils.createAccessTokenCookie(accessToken));
             response.addCookie(CookieUtils.createRefreshTokenCookie(refreshToken));
@@ -157,6 +161,10 @@ public class OAuthController {
             String accessToken = generateAccessToken(authentication);
             String refreshToken = generateRefreshToken(authentication);
             
+            // Update user's current token for session validation
+            existingUser.setCurrentToken(accessToken);
+            userRepository.save(existingUser);
+            
             // Set cookies
             response.addCookie(CookieUtils.createAccessTokenCookie(accessToken));
             response.addCookie(CookieUtils.createRefreshTokenCookie(refreshToken));
@@ -189,11 +197,7 @@ public class OAuthController {
                         needsUpdate = true;
                     }
                     
-                    // Update refresh token if provided
-                    if (refreshToken != null) {
-                        existingUser.setCurrentToken(refreshToken);
-                        needsUpdate = true;
-                    }
+                    // Note: currentToken will be set later with JWT access token
                     
                     // Set as verified and update status
                     if (!existingUser.isVerified() || existingUser.getStatus() != UserStatus.VERIFIED) {
@@ -216,7 +220,7 @@ public class OAuthController {
                             .status(UserStatus.VERIFIED) // Set status to VERIFIED for OAuth users
                             .oauthProvider(provider)
                             .oauthProviderId(providerId)
-                            .currentToken(refreshToken) // Store refresh token if available
+                            .currentToken(null) // Will be set later with JWT access token
                             .build();
                     
                     return userRepository.save(newUser);
@@ -236,7 +240,7 @@ public class OAuthController {
         return JWT.create()
                 .withIssuer("OriginalInvoiceAccessToken")
                 .withIssuedAt(now)
-                .withExpiresAt(now.plus(15, MINUTES))
+                .withExpiresAt(now.plus(30, MINUTES))
                 .withSubject(principal.getUsername())
                 .withClaim("principal", principal.getUsername())
                 .withClaim("credentials", authentication.getCredentials().toString())

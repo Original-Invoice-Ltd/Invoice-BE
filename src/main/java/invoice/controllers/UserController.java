@@ -82,7 +82,7 @@ public class UserController {
         return JWT.create()
                 .withIssuer("OriginalInvoiceAccessToken")
                 .withIssuedAt(now)
-                .withExpiresAt(now.plus(15, MINUTES))
+                .withExpiresAt(now.plus(30, MINUTES))
                 .withSubject(principal.getUsername())
                 .withClaim("principal", principal.getUsername())
                 .withClaim("credentials", authentication.getCredentials().toString())
