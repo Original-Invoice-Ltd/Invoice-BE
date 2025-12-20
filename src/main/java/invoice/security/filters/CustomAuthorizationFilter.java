@@ -11,8 +11,10 @@ import invoice.security.config.RsaKeyProperties;
 import invoice.security.services.AuthService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.util.AntPathMatcher;
 import lombok.AllArgsConstructor;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +42,7 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
     private final RsaKeyProperties rsaKeys;
     private final AuthService authService;
     private final UserRepository userRepository;
+    private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -47,17 +50,30 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
         log.info("Starting authorization");
         String requestPath = request.getRequestURI();
-        boolean isRequestPathPublic = PUBLIC_ENDPOINTS.contains(requestPath);
+        boolean isRequestPathPublic = isPublicEndpoint(requestPath);
         if (isRequestPathPublic) {
             log.info("Authorization not needed for public endpoint: {}", requestPath);
             filterChain.doFilter(request, response);
             return;
         }
+        // Check for token in Authorization header first
         String authorizationHeader = request.getHeader(AUTHORIZATION);
+        String token = null;
+        
         if (authorizationHeader != null && authorizationHeader.startsWith(JWT_PREFIX)) {
-            String token = authorizationHeader.substring(JWT_PREFIX.length()).strip();
+            token = authorizationHeader.substring(JWT_PREFIX.length()).strip();
+        } else {
+            // Check for token in cookies if not found in header
+            token = getTokenFromCookies(request);
+        }
+        
+        if (token != null) {
             if (isTokenBlacklisted(response, token)) return;
             if (!isAuthorized(token, response)) return;
+        } else {
+            log.warn("No access token found in Authorization header or cookies for protected endpoint: {}", requestPath);
+            sendErrorResponse(response, "Access token required");
+            return;
         }
         filterChain.doFilter(request, response);
     }
@@ -76,7 +92,7 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
         DecodedJWT decodedJWT;
         try {
             JWTVerifier jwtVerifier = JWT.require(algorithm)
-                    .withIssuer("OriginalInvoiceAuthToken")
+                    .withIssuer("OriginalInvoiceAccessToken")
                     .withClaimPresence("roles")
                     .withClaimPresence("principal")
                     .withClaimPresence("credentials")
@@ -106,6 +122,31 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
         SecurityContextHolder.getContext().setAuthentication(authentication);
         log.info("User authorization succeeded");
         return true;
+    }
+
+    private boolean isPublicEndpoint(String requestPath) {
+        for (String pattern : PUBLIC_ENDPOINTS) {
+            if (pathMatcher.match(pattern, requestPath)) {
+                log.info("Request path '{}' matched public pattern '{}'", requestPath, pattern);
+                return true;
+            }
+        }
+        log.info("Request path '{}' did not match any public patterns: {}", requestPath, PUBLIC_ENDPOINTS);
+        return false;
+    }
+
+    private String getTokenFromCookies(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("accessToken".equals(cookie.getName())) {
+                    log.info("Found access token in cookie");
+                    return cookie.getValue();
+                }
+            }
+        }
+        log.info("No access token found in cookies");
+        return null;
     }
 
     private void sendErrorResponse(HttpServletResponse response, String message) throws IOException {

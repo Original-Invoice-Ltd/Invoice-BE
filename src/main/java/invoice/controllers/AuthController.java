@@ -55,12 +55,13 @@ public class AuthController {
     private final AuthService authService;
     private final RsaKeyProperties rsaKeys;
 
-    private final  HttpServletResponse response;
+
 
     private final UserRepository userRepository;
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@CookieValue(name = "accessToken", required = false) String accessToken) {
+    public ResponseEntity<Void> logout(@CookieValue(name = "accessToken", required = false) String accessToken,
+                                     HttpServletResponse response) {
         if (accessToken != null) {
             authService.blacklist(accessToken);
         }
@@ -74,7 +75,8 @@ public class AuthController {
     }
     
     @PostMapping("/refresh")
-    public ResponseEntity<?> refreshToken(@CookieValue(name = "refreshToken", required = false) String refreshToken) {
+    public ResponseEntity<?> refreshToken(@CookieValue(name = "refreshToken", required = false) String refreshToken,
+                                        HttpServletResponse response) {
         try {
             if (refreshToken == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -94,16 +96,22 @@ public class AuthController {
             User user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new BusinessException("User not found"));
             
-            // Create authentication object for token generation
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(email, user.getPassword())
+            // Create authentication object manually (don't re-authenticate with password)
+            SecureUser secureUser = new SecureUser(user);
+            Authentication authentication = new UsernamePasswordAuthenticationToken(
+                    secureUser, 
+                    user.getPassword(), 
+                    secureUser.getAuthorities()
             );
             
-            // Generate new access token
-            String newAccessToken = generateAccessToken(authentication);
+            // Generate new access token with extended expiry (1 hour) for active users
+            String newAccessToken = generateExtendedAccessToken(authentication);
             
-            // Set new access token cookie
-            response.addCookie(CookieUtils.createAccessTokenCookie(newAccessToken));
+            // Update user's current token
+            authService.invalidatePreviousTokens(email, newAccessToken);
+            
+            // Set new access token cookie with extended expiry
+            response.addCookie(CookieUtils.createExtendedAccessTokenCookie(newAccessToken));
             
             return ResponseEntity.ok(Map.of(
                     "success", true,
@@ -118,7 +126,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest, HttpServletResponse response) {
         try {
             User user = userRepository.findByEmail(loginRequest.getEmail())
                     .orElseThrow(()->new BusinessException("user not found"));
@@ -148,6 +156,10 @@ public class AuthController {
             
             // Generate refresh token (30 days)
             String refreshToken = generateRefreshToken(authentication);
+
+            // Update user's current token for session validation
+            user.setCurrentToken(accessToken);
+            userRepository.save(user);
 
             // Set tokens as HTTP-only secure cookies
             response.addCookie(CookieUtils.createAccessTokenCookie(accessToken));
@@ -193,7 +205,24 @@ public class AuthController {
         return JWT.create()
                 .withIssuer("OriginalInvoiceAccessToken")
                 .withIssuedAt(now)
-                .withExpiresAt(now.plus(15, MINUTES))
+                .withExpiresAt(now.plus(30, MINUTES))
+                .withSubject(principal.getUsername())
+                .withClaim("principal", principal.getUsername())
+                .withClaim("credentials", authentication.getCredentials().toString())
+                .withArrayClaim("roles", extractAuthorities(authentication.getAuthorities()))
+                .withClaim("type", "access")
+                .sign(algorithm);
+    }
+    
+    private String generateExtendedAccessToken(Authentication authentication) {
+        Algorithm algorithm = Algorithm.RSA512(rsaKeys.publicKey(), rsaKeys.privateKey());
+        Instant now = Instant.now();
+        UserDetails principal = (UserDetails) authentication.getPrincipal();
+
+        return JWT.create()
+                .withIssuer("OriginalInvoiceAccessToken")
+                .withIssuedAt(now)
+                .withExpiresAt(now.plus(1, HOURS)) // Extended to 1 hour for active users
                 .withSubject(principal.getUsername())
                 .withClaim("principal", principal.getUsername())
                 .withClaim("credentials", authentication.getCredentials().toString())
