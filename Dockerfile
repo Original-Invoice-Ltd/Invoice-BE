@@ -1,11 +1,24 @@
-FROM maven:3.8.7 AS build
+# ---------- BUILD STAGE ----------
+FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /app
-COPY . .
+
+
+COPY pom.xml .
+RUN mvn -B dependency:go-offline
+
+
+COPY src ./src
+
 RUN mvn -B clean package -DskipTests
 
-FROM eclipse-temurin:17-jdk
+
+# ---------- RUNTIME STAGE ----------
+FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
-COPY --from=build /app/target/*.jar invoice.jar
+
+# Copy built jar only
+COPY --from=build /app/target/*.jar app.jar
+
 EXPOSE 8089
 
-ENTRYPOINT ["java", "-Dserver.port=8089", "-jar", "invoice.jar"]
+ENTRYPOINT ["java", "-Dserver.port=8089", "-jar", "app.jar"]
