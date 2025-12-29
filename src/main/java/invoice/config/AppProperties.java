@@ -13,6 +13,6 @@ public class AppProperties {
     
     @Data
     public static class Frontend {
-        private String dashboardUrl = "https://originalinvoice.com/dashboard/overview";
+        private String dashboardUrl;
     }
 }
