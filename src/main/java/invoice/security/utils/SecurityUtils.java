@@ -12,8 +12,8 @@ public class SecurityUtils {
             PUBLIC_ENDPOINTS = List.of(
                 "/api/users/**",
                 "/api/auth/**",
-                "/api/v1/users/**",
-                "/api/v1/auth/**"
+                "/oauth/**"
+
     );
 
 }

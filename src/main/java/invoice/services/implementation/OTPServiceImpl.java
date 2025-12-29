@@ -143,7 +143,7 @@ public class OTPServiceImpl implements OTPService {
         
         // Send welcome email
         try {
-            emailService.sendWelcomeEmail(user.getEmail(), user.getFullName());
+            emailService.sendWelcomeEmail(user.getEmail(), user.getEmail());
         } catch (Exception e) {
             log.warn("Failed to send welcome email to {}: {}", user.getEmail(), e.getMessage());
         }
@@ -166,7 +166,7 @@ public class OTPServiceImpl implements OTPService {
         
         // Send OTP email
         try {
-            emailService.sendOTPEmail(user.getEmail(), user.getFullName(), newToken.getOtp());
+            emailService.sendOTPEmail(user.getEmail(), user.getEmail(), newToken.getOtp());
             return true;
         } catch (Exception e) {
             log.error("Failed to send OTP email to {}: {}", user.getEmail(), e.getMessage());
@@ -284,7 +284,7 @@ public class OTPServiceImpl implements OTPService {
         
         // Send password reset OTP email
         try {
-            emailService.sendPasswordResetOTPEmail(user.getEmail(), user.getFullName(), newToken.getOtp());
+            emailService.sendPasswordResetOTPEmail(user.getEmail(), user.getEmail(), newToken.getOtp());
             return true;
         } catch (Exception e) {
             log.error("Failed to send password reset OTP email to {}: {}", user.getEmail(), e.getMessage());

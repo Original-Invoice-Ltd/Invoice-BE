@@ -4,19 +4,18 @@ package invoice.security.data.models;
 import invoice.data.constants.Role;
 import invoice.data.models.User;
 import lombok.Getter;
+import lombok.Setter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.Set;
 
 public class SecureUser implements UserDetails {
     private final User user;
     @Getter
     private final String fullName;
-
     @Getter
     private final String mediaUrl;
     @Getter
@@ -26,10 +25,10 @@ public class SecureUser implements UserDetails {
 
     public SecureUser(User user) {
         this.user = user;
-        this.fullName = user.getFullName();
         this.mediaUrl = user.getMediaUrl();
         this.roles = user.getRoles();
         this.isVerified = user.isVerified();
+        this.fullName = user.getFullName();
     }
 
     @Override

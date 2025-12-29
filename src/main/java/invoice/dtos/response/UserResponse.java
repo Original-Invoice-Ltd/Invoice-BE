@@ -8,12 +8,13 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 @Setter
 @Getter
 @AllArgsConstructor
 public class UserResponse {
-    private Long id;
+    private UUID id;
     private String fullName;
     private String email;
     private LocalDateTime createdAt;
@@ -23,11 +24,10 @@ public class UserResponse {
     private String imageUrl;
     public UserResponse(User user) {
         this.id = user.getId();
-        this.fullName = user.getFullName();
         this.email = user.getEmail();
+        this.fullName = user.getFullName();
         this.createdAt = user.getCreatedAt();
         this.roles = Collections.singletonList(String.valueOf(user.getRoles().stream().toList()));
         this.isActive = user.isVerified();
-        this.phone = user.getPhone();
         this.imageUrl = (user.getMediaUrl() != null) ? user.getMediaUrl() : "";    }
 }
