@@ -41,3 +41,13 @@ build/
 .vscode/
 
 /src/main/resources/secrets.properties
+
+
+
+target
+.git
+.idea
+*.log
+node_modules
+build
+
