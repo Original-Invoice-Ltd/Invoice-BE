@@ -61,7 +61,7 @@ jobs:
         sudo docker run -d \
           --restart=always \
           --name backend \
-          -p 8080:8080 \
+          -p 8080:8089 \
           --link postgres:postgres \
           --env-file /home/ubuntu/invoice-BE.env \
           138842205538.dkr.ecr.us-west-2.amazonaws.com/invoice:latest
