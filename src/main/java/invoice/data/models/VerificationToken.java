@@ -19,7 +19,7 @@ public class VerificationToken {
     @Column(unique = true)
     private String token;
 
-    @Column(length = 4)
+    @Column(length = 6)
     private String otp;
 
     @OneToOne(fetch = FetchType.LAZY)

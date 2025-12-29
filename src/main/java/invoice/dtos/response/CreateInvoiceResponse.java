@@ -15,6 +15,7 @@ public class CreateInvoiceResponse {
     private String invoiceNumber;
     private String logoUrl;
     private String imageUrl;
+    private String signatureUrl;
     private LocalDateTime creationDate;
     private LocalDateTime dueDate;
     private String currency;

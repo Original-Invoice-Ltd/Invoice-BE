@@ -1,6 +1,4 @@
 spring:
-  config:
-    import: secrets.properties
   servlet:
     multipart:
       enabled: true
@@ -19,29 +17,22 @@ spring:
       max-lifetime: 600000
       connection-timeout: 10000
   jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    properties:
+      hibernate:
+        temp:
+          use_jdbc_metadata_defaults: false
     hibernate:
       ddl-auto: update
 
-  mail:
-    host: ${SPRING_MAIL_HOST}
-    port: ${SPRING_MAIL_PORT}
-    username: ${SPRING_MAIL_USERNAME}
-    password: ${SPRING_MAIL_PASSWORD}
-    protocol: ${SPRING_MAIL_PROTOCOL}
-    properties:
-      mail.smtp.auth: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH}
-      mail.smtp.starttls.required: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED}
-      mail.smtp.starttls.enable: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE}
+mailgun:
+  api:
+    key: ${MAILGUN_API_KEY}
+  domain: ${MAILGUN_DOMAIN}
+  from:
+    name: ${MAILGUN_FROM_NAME:Agro Smart Benue}
+    email: ${MAILGUN_FROM_EMAIL}
 
-eureka:
-  instance:
-    #hostname: 192.168.0.146
-    hostname: localhost
-    prefer-ip-address: true
-  client:
-    service-url:
-      #defaultZone: http://41.78.80.108:8761/eureka/
-      defaultZone : http://localhost:8761/eureka/
 
 cloud:
   api:
@@ -51,23 +42,32 @@ cloud:
 
 
 server:
-  port: 8983
+  port: 8089
   address: 0.0.0.0
 
 rsa:
   public-key: classpath:keys/publicKey.pem
   private-key: classpath:keys/privateKey.pem
 
-springdoc:
-  swagger-ui:
-    enabled: true
-    path: /swagger-ui
-  api-docs:
-    path: /api-docs
-  info:
-    title: Original-Invoice
-    description: Original Invoice APIs
-    version: 1.0.0
-    contact:
-      name: Joseph
-      email: ajaditaoreed@gmail.com
+oauth:
+  google:
+    client-id: ${GOOGLE_CLIENT_ID}
+    client-secret: ${GOOGLE_CLIENT_SECRET}
+    redirect-uri: ${GOOGLE_REDIRECT_URI}
+    scope: openid email profile
+  apple:
+    client-id: ${APPLE_CLIENT_ID:your-production-apple-client-id}
+    team-id: ${APPLE_TEAM_ID:your-apple-team-id}
+    key-id: ${APPLE_KEY_ID:your-apple-key-id}
+    private-key-path: ${APPLE_PRIVATE_KEY_PATH:classpath:apple-private-key.p8}
+    redirect-uri: ${APPLE_REDIRECT_URI:https://api.originalinvoice.com/oauth/apple/callback}
+
+app:
+  frontend:
+    dashboard-url: ${FRONTEND_DASHBOARD_URL}
+
+paystack:
+  api:
+    url: https://api.paystack.co
+    secret:
+      key: ${PAYSTACK_SECRET_KEY}

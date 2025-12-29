@@ -26,5 +26,5 @@ public class LoginResponse {
     private String phone;
     private Set<Role> roles;
     private String mediaUrl;
-    private String token;
+    // Token removed - now sent as HTTP-only cookie
 }
