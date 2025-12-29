@@ -52,7 +52,8 @@ public class SecurityConfig {
                 "http://localhost:3001", 
                 "http://localhost:3002",
                 "http://localhost:5173", // Vite default
-                "https://originalinvoice.com", // Add your production domain
+                "https://originalinvoice.com", // Production domain
+                "https://www.originalinvoice.com", // Production domain with www
                 "https://dev.originalinvoice.com"
         ));
         
