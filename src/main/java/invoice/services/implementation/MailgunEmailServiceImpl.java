@@ -244,55 +244,99 @@ public class MailgunEmailServiceImpl implements EmailService {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Verify your email - Original Invoice</title>
         </head>
-        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #f5f7fa 0%%, #c3cfe2 100%%); padding: 40px 20px;">
-            <table cellpadding="0" cellspacing="0" border="0" width="100%%" style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">
+        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f1f5f9; padding: 40px 20px;">
+            <table cellpadding="0" cellspacing="0" border="0" width="100%%" style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+                <!-- Header with Logo -->
                 <tr>
-                    <td style="background: linear-gradient(135deg, #16a34a 0%%, #15803d 100%%); padding: 40px 30px; text-align: center; position: relative;">
-                        <h1 style="color: white; margin: 0; font-size: 32px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">Agro Smart Benue</h1>
-                        <p style="color: rgba(255,255,255,0.9); margin: 12px 0 0 0; font-size: 15px;">Empowering Farmers, Growing Communities</p>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="padding: 40px 35px;">
-                        <div style="text-align: center; margin-bottom: 30px;">
-                            <div style="display: inline-block; background: linear-gradient(135deg, #dcfce7 0%%, #bbf7d0 100%%); padding: 15px; border-radius: 50%%; margin-bottom: 20px;">
-                                <span style="font-size: 40px;">🔐</span>
-                            </div>
-                            <h2 style="color: #16a34a; margin: 0 0 10px 0; font-size: 26px; font-weight: 700;">Verification Code</h2>
-                            <p style="color: #6b7280; font-size: 15px; margin: 0;">Enter this code to verify your email</p>
-                        </div>
-                        
-                        <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">Hi <strong style="color: #16a34a;">%s</strong>,</p>
-                        <p style="color: #4b5563; font-size: 15px; line-height: 1.7; margin: 0 0 30px 0;">Use the verification code below to complete your registration. This code is unique to you and should not be shared with anyone.</p>
-                        
-                        <div style="background: linear-gradient(135deg, #f0fdf4 0%%, #dcfce7 100%%); padding: 30px; text-align: center; margin: 30px 0; border-radius: 12px; border: 3px dashed #16a34a; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.1);">
-                            <p style="color: #15803d; font-size: 14px; font-weight: 600; margin: 0 0 15px 0; text-transform: uppercase; letter-spacing: 1px;">Your Verification Code</p>
-                            <h1 style="color: #16a34a; font-size: 48px; letter-spacing: 8px; margin: 0; font-weight: 800; text-shadow: 0 2px 4px rgba(22, 163, 74, 0.1);">%s</h1>
-                        </div>
-                        
-                        <div style="background: linear-gradient(135deg, #fef3c7 0%%, #fde68a 100%%); border-left: 4px solid #f59e0b; padding: 15px 20px; border-radius: 8px; margin: 30px 0;">
-                            <p style="color: #92400e; font-size: 14px; margin: 0; line-height: 1.6;">
-                                <strong>⏰ Expires in 10 minutes</strong><br>
-                                Please enter this code promptly to complete your verification.
-                            </p>
-                        </div>
-                        
-                        <div style="background: linear-gradient(135deg, #fee2e2 0%%, #fecaca 100%%); border-left: 4px solid #dc2626; padding: 15px 20px; border-radius: 8px; margin: 20px 0 0 0;">
-                            <p style="color: #991b1b; font-size: 13px; margin: 0; line-height: 1.6;">
-                                <strong>🔒 Security Notice:</strong> If you didn't request this code, please ignore this email. Your account remains secure.
-                            </p>
+                    <td style="background-color: #f1f5f9; padding: 40px 40px 20px 40px; text-align: center;">
+                        <div style="display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+                            <svg width="48" height="48" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 12px;">
+                                <rect width="32" height="32" rx="9" fill="url(#paint0_linear_14310_13934)"/>
+                                <rect x="0.25" y="0.25" width="31.5" height="31.5" rx="8.75" stroke="white" stroke-opacity="0.27" stroke-width="0.5"/>
+                                <path d="M10.7339 8.09381C10.9572 7.70706 11.3699 7.46881 11.8165 7.46881L20.4298 7.46881C20.8764 7.46881 21.2891 7.70706 21.5124 8.09381L25.819 15.5532C26.0423 15.94 26.0423 16.4165 25.819 16.8032L22.5039 22.5452L21.4214 20.6702L24.0148 16.1782L20.069 9.34381L12.1773 9.34381L9.59725 13.8126H7.43219L10.7339 8.09381Z" fill="#EFF8FF"/>
+                                <path d="M20.0875 22.9804L21.0825 24.7037C20.8892 24.822 20.6642 24.8876 20.4298 24.8876H11.8165C11.3699 24.8876 10.9572 24.6494 10.7339 24.2626L6.42723 16.8032C6.31181 16.6033 6.25606 16.3794 6.25996 16.1563L15.6132 16.1562C15.9488 16.1562 16.2589 16.3357 16.4261 16.6268L20.0818 22.9904L20.0875 22.9804Z" fill="#EFF8FF"/>
+                                <defs>
+                                    <linearGradient id="paint0_linear_14310_13934" x1="16" y1="0" x2="16" y2="32" gradientUnits="userSpaceOnUse">
+                                        <stop stop-color="#3B82F6"/>
+                                        <stop offset="1" stop-color="#1D4ED8"/>
+                                    </linearGradient>
+                                </defs>
+                            </svg>
                         </div>
                     </td>
                 </tr>
+                
+                <!-- Main Content -->
                 <tr>
-                    <td style="background: linear-gradient(135deg, #f9fafb 0%%, #f3f4f6 100%%); padding: 30px 35px; border-top: 1px solid #e5e7eb;">
-                        <p style="color: #9ca3af; font-size: 13px; text-align: center; margin: 0 0 10px 0; line-height: 1.6;">
-                            Best regards,<br>
-                            <strong style="color: #16a34a;">The Agro Smart Benue Team</strong>
+                    <td style="padding: 40px; background-color: white;">
+                        <h2 style="color: #1e293b; margin: 0 0 24px 0; font-size: 32px; font-weight: 700; line-height: 1.2;">Verify your email</h2>
+                        
+                        <p style="color: #475569; font-size: 16px; line-height: 1.6; margin: 0 0 8px 0;">Hi <strong>%s</strong>,</p>
+                        
+                        <p style="color: #64748b; font-size: 16px; line-height: 1.6; margin: 0 0 16px 0;">
+                            Thanks for signing up for Original Invoice.
                         </p>
-                        <p style="color: #d1d5db; font-size: 11px; text-align: center; margin: 15px 0 0 0;">
-                            © 2024 Agro Smart Benue. All rights reserved.
+                        
+                        <p style="color: #64748b; font-size: 16px; line-height: 1.6; margin: 0 0 32px 0;">
+                            To verify your account, please enter the following verification code on Original Invoice:
+                        </p>
+                        
+                        <!-- Verification Code Box -->
+                        <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 40px; text-align: center; margin: 32px 0;">
+                            <h1 style="color: #1e293b; margin: 0; font-size: 48px; font-weight: 800; letter-spacing: 4px; font-family: 'Courier New', monospace;">%s</h1>
+                        </div>
+                        
+                        <p style="color: #64748b; font-size: 14px; line-height: 1.5; margin: 24px 0 0 0;">
+                            If you didn't create an account, you can ignore this message.
+                        </p>
+                        
+                        <div style="margin-top: 40px; padding-top: 24px;">
+                            <p style="color: #64748b; font-size: 14px; line-height: 1.5; margin: 0 0 8px 0;">
+                                Best regards,<br>
+                                <strong style="color: #1e293b;">The Original Invoice Team</strong>
+                            </p>
+                        </div>
+                    </td>
+                </tr>
+                
+                <!-- Footer -->
+                <tr>
+                    <td style="background-color: #ffffff; padding: 32px 40px; text-align: center;">
+                        <div style="margin-bottom: 16px;">
+                            <h3 style="color: #1e293b; margin: 0 0 8px 0; font-size: 16px; font-weight: 600;">Original Invoice</h3>
+                            <p style="color: #3b82f6; margin: 0; font-size: 14px;">
+                                <a href="mailto:support@originalinvoice.com" style="color: #3b82f6; text-decoration: none;">support@originalinvoice.com</a>
+                            </p>
+                        </div>
+                        
+                        <!-- Social Media Icons -->
+                        <div style="margin: 20px 0;">
+                            <a href="#" style="display: inline-block; margin: 0 8px; text-decoration: none;">
+                                <div style="width: 32px; height: 32px; background-color: #0077b5; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center;">
+                                    <span style="color: white; font-size: 16px;">💼</span>
+                                </div>
+                            </a>
+                            <a href="#" style="display: inline-block; margin: 0 8px; text-decoration: none;">
+                                <div style="width: 32px; height: 32px; background-color: #1da1f2; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center;">
+                                    <span style="color: white; font-size: 16px;">🐦</span>
+                                </div>
+                            </a>
+                            <a href="#" style="display: inline-block; margin: 0 8px; text-decoration: none;">
+                                <div style="width: 32px; height: 32px; background-color: #1da1f2; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center;">
+                                    <span style="color: white; font-size: 16px;">❌</span>
+                                </div>
+                            </a>
+                            <a href="#" style="display: inline-block; margin: 0 8px; text-decoration: none;">
+                                <div style="width: 32px; height: 32px; background-color: #1877f2; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center;">
+                                    <span style="color: white; font-size: 16px;">📘</span>
+                                </div>
+                            </a>
+                        </div>
+                        
+                        <p style="color: #94a3b8; font-size: 12px; margin: 16px 0 0 0;">
+                            © 2025 Original Invoice. All rights reserved.
                         </p>
                     </td>
                 </tr>
@@ -376,13 +420,13 @@ public class MailgunEmailServiceImpl implements EmailService {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Welcome to Original Invoice</title>
         </head>
-        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8fafc; padding: 40px 20px;">
+        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f1f5f9; padding: 40px 20px;">
             <table cellpadding="0" cellspacing="0" border="0" width="100%%" style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
                 <!-- Header with Logo -->
                 <tr>
-                    <td style="background-color: #ffffff; padding: 40px 40px 20px 40px; text-align: center; border-bottom: 1px solid #e2e8f0;">
+                    <td style="background-color: #f1f5f9; padding: 40px 40px 20px 40px; text-align: center;">
                         <div style="display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
-                            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 12px;">
+                            <svg width="48" height="48" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 12px;">
                                 <rect width="32" height="32" rx="9" fill="url(#paint0_linear_14310_13934)"/>
                                 <rect x="0.25" y="0.25" width="31.5" height="31.5" rx="8.75" stroke="white" stroke-opacity="0.27" stroke-width="0.5"/>
                                 <path d="M10.7339 8.09381C10.9572 7.70706 11.3699 7.46881 11.8165 7.46881L20.4298 7.46881C20.8764 7.46881 21.2891 7.70706 21.5124 8.09381L25.819 15.5532C26.0423 15.94 26.0423 16.4165 25.819 16.8032L22.5039 22.5452L21.4214 20.6702L24.0148 16.1782L20.069 9.34381L12.1773 9.34381L9.59725 13.8126H7.43219L10.7339 8.09381Z" fill="#EFF8FF"/>
@@ -394,28 +438,27 @@ public class MailgunEmailServiceImpl implements EmailService {
                                     </linearGradient>
                                 </defs>
                             </svg>
-                            <h1 style="color: #1e293b; margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">Original Invoice</h1>
                         </div>
                     </td>
                 </tr>
                 
                 <!-- Main Content -->
                 <tr>
-                    <td style="padding: 40px;">
-                        <h2 style="color: #1e293b; margin: 0 0 24px 0; font-size: 28px; font-weight: 700; line-height: 1.2;">Welcome to Original Invoice</h2>
+                    <td style="padding: 40px; background-color: white;">
+                        <h2 style="color: #1e293b; margin: 0 0 24px 0; font-size: 32px; font-weight: 700; line-height: 1.2;">Welcome to Original Invoice</h2>
                         
                         <p style="color: #475569; font-size: 16px; line-height: 1.6; margin: 0 0 8px 0;">Hi <strong>%s</strong>,</p>
                         
                         <p style="color: #64748b; font-size: 16px; line-height: 1.6; margin: 0 0 16px 0;">
-                            Welcome to Original Invoice. We're glad to have you here.
+                            Welcome to Original Invoice, we're glad to have you here.
                         </p>
                         
-                        <p style="color: #64748b; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;">
+                        <p style="color: #64748b; font-size: 16px; line-height: 1.6; margin: 0 0 16px 0;">
                             Your account is now active, and you can start creating invoices, managing clients, and tracking payments right away.
                         </p>
                         
                         <p style="color: #64748b; font-size: 16px; line-height: 1.6; margin: 0 0 32px 0;">
-                            Everything is designed to help you work faster and stay organized with less effort.
+                            Everything is designed to help you work faster and stay organised with less effort.
                         </p>
                         
                         <!-- CTA Button -->
@@ -429,7 +472,7 @@ public class MailgunEmailServiceImpl implements EmailService {
                             If you ever need help, we're always here to support you.
                         </p>
                         
-                        <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid #e2e8f0;">
+                        <div style="margin-top: 40px; padding-top: 24px;">
                             <p style="color: #64748b; font-size: 14px; line-height: 1.5; margin: 0 0 8px 0;">
                                 Best regards,<br>
                                 <strong style="color: #1e293b;">The Original Invoice Team</strong>
@@ -440,7 +483,7 @@ public class MailgunEmailServiceImpl implements EmailService {
                 
                 <!-- Footer -->
                 <tr>
-                    <td style="background-color: #f8fafc; padding: 32px 40px; text-align: center; border-top: 1px solid #e2e8f0;">
+                    <td style="background-color: #ffffff; padding: 32px 40px; text-align: center;">
                         <div style="margin-bottom: 16px;">
                             <h3 style="color: #1e293b; margin: 0 0 8px 0; font-size: 16px; font-weight: 600;">Original Invoice</h3>
                             <p style="color: #3b82f6; margin: 0; font-size: 14px;">
@@ -451,18 +494,18 @@ public class MailgunEmailServiceImpl implements EmailService {
                         <!-- Social Media Icons -->
                         <div style="margin: 20px 0;">
                             <a href="#" style="display: inline-block; margin: 0 8px; text-decoration: none;">
-                                <div style="width: 32px; height: 32px; background-color: #3b82f6; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center;">
-                                    <span style="color: white; font-size: 16px;">📧</span>
+                                <div style="width: 32px; height: 32px; background-color: #0077b5; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center;">
+                                    <span style="color: white; font-size: 16px;">💼</span>
+                                </div>
+                            </a>
+                            <a href="#" style="display: inline-block; margin: 0 8px; text-decoration: none;">
+                                <div style="width: 32px; height: 32px; background-color: #E1306C; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center;">
+                                    <span style="color: white; font-size: 16px;">📷</span>
                                 </div>
                             </a>
                             <a href="#" style="display: inline-block; margin: 0 8px; text-decoration: none;">
                                 <div style="width: 32px; height: 32px; background-color: #1da1f2; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center;">
-                                    <span style="color: white; font-size: 16px;">🐦</span>
-                                </div>
-                            </a>
-                            <a href="#" style="display: inline-block; margin: 0 8px; text-decoration: none;">
-                                <div style="width: 32px; height: 32px; background-color: #0077b5; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center;">
-                                    <span style="color: white; font-size: 16px;">💼</span>
+                                    <span style="color: white; font-size: 16px;">❌</span>
                                 </div>
                             </a>
                             <a href="#" style="display: inline-block; margin: 0 8px; text-decoration: none;">
