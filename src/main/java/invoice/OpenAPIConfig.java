@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Configuration;
 import java.util.List;
 
 @Configuration
-public class OpenAPIConfig {
+public class OpenApiConfig {
 
     @Value("${server.port:8089}")
     private String serverPort;
@@ -50,6 +50,7 @@ public class OpenAPIConfig {
                         .contact(new Contact()
                                 .name("Original Invoice Team")
                                 .email("Admin@originalinvoice.com")))
-                .servers(List.of(new Server().url("http://localhost:" + serverPort)));
+                .servers(List.of( new Server().url("http://localhost:" + serverPort).description("Local development server"),
+                 new Server().url("https://api.originalinvoice.com").description("Production live server") ));
     }
 }
