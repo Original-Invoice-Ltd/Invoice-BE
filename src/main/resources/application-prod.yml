@@ -64,7 +64,7 @@ oauth:
 
 app:
   frontend:
-    dashboard-url: ${FRONTEND_DASHBOARD_URL}
+    dashboard-url: ${FRONTEND_DASHBOARD_URL:https://originalinvoice.com/dashboard/overview}
 
 paystack:
   api:

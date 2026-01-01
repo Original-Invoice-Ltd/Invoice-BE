@@ -58,7 +58,7 @@ oauth:
 
 app:
   frontend:
-    dashboard-url: ${FRONTEND_DASHBOARD_URL:http://localhost:3000/dashboard}
+    dashboard-url: ${FRONTEND_DASHBOARD_URL:http://localhost:3000/dashboard/overview}
 
 paystack:
   api:
