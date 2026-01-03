@@ -31,6 +31,7 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
     private String fullName;
+    private String phoneNumber;
     @ElementCollection(fetch=EAGER)
     @Enumerated(STRING)
     private Set<Role> roles;
