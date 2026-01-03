@@ -27,6 +27,7 @@ import invoice.security.config.RsaKeyProperties;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -48,21 +49,56 @@ public class OAuthController {
     
     // Google OAuth endpoints
     @GetMapping("/google/login")
-    public void googleLogin(HttpServletResponse response) throws IOException {
+    public void googleLogin(@RequestParam(required = false) String state, HttpServletResponse response) throws IOException {
         String authUrl = oauthService.generateGoogleAuthUrl();
+        
+        // If state is provided, append it to the auth URL
+        if (state != null && !state.isEmpty()) {
+            authUrl += "&state=" + java.net.URLEncoder.encode(state, "UTF-8");
+        }
+        
         response.sendRedirect(authUrl);
     }
     
     @GetMapping("/google/callback")
-    public void googleCallback(@RequestParam String code, HttpServletResponse response) throws IOException {
+    public void googleCallback(
+            @RequestParam String code, 
+            @RequestParam(required = false) String state,
+            HttpServletResponse response) throws IOException {
         try {
+            // Parse phone number and flow type from state if provided
+            String phoneNumber = null;
+            boolean isSignIn = false;
+            if (state != null && !state.isEmpty()) {
+                try {
+                    String decodedState = new String(java.util.Base64.getDecoder().decode(state));
+                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                    com.fasterxml.jackson.databind.JsonNode stateNode = mapper.readTree(decodedState);
+                    phoneNumber = stateNode.has("phoneNumber") ? stateNode.get("phoneNumber").asText() : null;
+                    isSignIn = stateNode.has("isSignIn") ? stateNode.get("isSignIn").asBoolean() : false;
+                    if (phoneNumber != null && phoneNumber.isEmpty()) {
+                        phoneNumber = null;
+                    }
+                } catch (Exception e) {
+                    log.warn("Failed to parse OAuth state parameter", e);
+                }
+            }
+            
             // Exchange code for tokens
             GoogleTokenResponse tokenResponse = oauthService.exchangeGoogleCode(code);
             
             // Get user info from Google
             GoogleUserInfo userInfo = oauthService.getGoogleUserInfo(tokenResponse.getAccessToken());
             
-            // Create or find user
+            // Check if user exists
+            boolean userExists = userRepository.findByEmail(userInfo.getEmail()).isPresent();
+            
+            // For sign-in flow, only use phone number if user doesn't exist (new user)
+            if (isSignIn && userExists) {
+                phoneNumber = null; // Don't update phone for existing users during sign-in
+            }
+            
+            // Create or find user with phone number
             User user = createOrUpdateUser(
                 userInfo.getEmail(),
                 userInfo.getName(),
@@ -70,7 +106,8 @@ public class OAuthController {
                 userInfo.getFamilyName(),
                 "GOOGLE",
                 userInfo.getId(),
-                tokenResponse.getRefreshToken()
+                tokenResponse.getRefreshToken(),
+                phoneNumber
             );
             
             // Generate JWT tokens
@@ -86,7 +123,7 @@ public class OAuthController {
             response.addCookie(CookieUtils.createAccessTokenCookie(accessToken));
             response.addCookie(CookieUtils.createRefreshTokenCookie(refreshToken));
             
-            // Redirect to dashboard
+            // Always redirect to dashboard since phone number is collected upfront
             response.sendRedirect(appProperties.getFrontend().getDashboardUrl());
             
         } catch (Exception e) {
@@ -97,8 +134,14 @@ public class OAuthController {
     
     // Apple OAuth endpoints
     @GetMapping("/apple/login")
-    public void appleLogin(HttpServletResponse response) throws IOException {
+    public void appleLogin(@RequestParam(required = false) String state, HttpServletResponse response) throws IOException {
         String authUrl = oauthService.generateAppleAuthUrl();
+        
+        // If state is provided, append it to the auth URL
+        if (state != null && !state.isEmpty()) {
+            authUrl += "&state=" + java.net.URLEncoder.encode(state, "UTF-8");
+        }
+        
         response.sendRedirect(authUrl);
     }
     
@@ -107,8 +150,27 @@ public class OAuthController {
             @RequestParam String code,
             @RequestParam(required = false) String id_token,
             @RequestParam(required = false) String user,
+            @RequestParam(required = false) String state,
             HttpServletResponse response) throws IOException {
         try {
+            // Parse phone number and flow type from state if provided
+            String phoneNumber = null;
+            boolean isSignIn = false;
+            if (state != null && !state.isEmpty()) {
+                try {
+                    String decodedState = new String(java.util.Base64.getDecoder().decode(state));
+                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                    com.fasterxml.jackson.databind.JsonNode stateNode = mapper.readTree(decodedState);
+                    phoneNumber = stateNode.has("phoneNumber") ? stateNode.get("phoneNumber").asText() : null;
+                    isSignIn = stateNode.has("isSignIn") ? stateNode.get("isSignIn").asBoolean() : false;
+                    if (phoneNumber != null && phoneNumber.isEmpty()) {
+                        phoneNumber = null;
+                    }
+                } catch (Exception e) {
+                    log.warn("Failed to parse OAuth state parameter", e);
+                }
+            }
+            
             AppleUserInfo userInfo;
             
             if (id_token != null) {
@@ -145,6 +207,14 @@ public class OAuthController {
                 }
             }
             
+            // Check if user exists
+            boolean userExists = userRepository.findByEmail(userInfo.getEmail()).isPresent();
+            
+            // For sign-in flow, only use phone number if user doesn't exist (new user)
+            if (isSignIn && userExists) {
+                phoneNumber = null; // Don't update phone for existing users during sign-in
+            }
+            
             // Create or find user
             User existingUser = createOrUpdateUser(
                 userInfo.getEmail(),
@@ -153,7 +223,8 @@ public class OAuthController {
                 familyName,
                 "APPLE",
                 userInfo.getSub(),
-                null // Apple doesn't provide refresh tokens in this flow
+                null, // Apple doesn't provide refresh tokens in this flow
+                phoneNumber
             );
             
             // Generate JWT tokens
@@ -169,7 +240,7 @@ public class OAuthController {
             response.addCookie(CookieUtils.createAccessTokenCookie(accessToken));
             response.addCookie(CookieUtils.createRefreshTokenCookie(refreshToken));
             
-            // Redirect to dashboard
+            // Always redirect to dashboard since phone number is collected upfront
             response.sendRedirect(appProperties.getFrontend().getDashboardUrl());
             
         } catch (Exception e) {
@@ -178,7 +249,7 @@ public class OAuthController {
         }
     }
     
-    private User createOrUpdateUser(String email, String fullName, String givenName, String familyName, String provider, String providerId, String refreshToken) {
+    private User createOrUpdateUser(String email, String fullName, String givenName, String familyName, String provider, String providerId, String refreshToken, String phoneNumber) {
         return userRepository.findByEmail(email)
                 .map(existingUser -> {
                     // Update existing user
@@ -187,6 +258,12 @@ public class OAuthController {
                     // Update name if missing
                     if ((existingUser.getFullName() == null || existingUser.getFullName().isEmpty()) && fullName != null) {
                         existingUser.setFullName(fullName);
+                        needsUpdate = true;
+                    }
+                    
+                    // Update phone number if provided and missing
+                    if ((existingUser.getPhoneNumber() == null || existingUser.getPhoneNumber().isEmpty()) && phoneNumber != null) {
+                        existingUser.setPhoneNumber(phoneNumber);
                         needsUpdate = true;
                     }
                     
@@ -214,6 +291,7 @@ public class OAuthController {
                             .id(UUID.randomUUID())
                             .email(email)
                             .fullName(fullName != null ? fullName : (givenName != null && familyName != null ? givenName + " " + familyName : email))
+                            .phoneNumber(phoneNumber) // Set phone number from OAuth flow
                             .password(passwordEncoder.encode(UUID.randomUUID().toString())) // Random password for OAuth users
                             .roles(Set.of(Role.USER))
                             .isVerified(true)

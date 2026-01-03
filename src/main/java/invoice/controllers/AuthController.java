@@ -485,4 +485,36 @@ public class AuthController {
         }
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser(Principal principal) {
+        try {
+            if (principal == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "User not authenticated"));
+            }
+            
+            User user = userRepository.findByEmail(principal.getName())
+                    .orElseThrow(() -> new BusinessException("User not found"));
+            
+            // Return user info without sensitive data
+            Map<String, Object> userInfo = Map.of(
+                    "id", user.getId().toString(),
+                    "email", user.getEmail(),
+                    "fullName", user.getFullName(),
+                    "phoneNumber", user.getPhoneNumber() != null ? user.getPhoneNumber() : "",
+                    "isVerified", user.getStatus().name().equals("VERIFIED"),
+                    "mediaUrl", user.getMediaUrl() != null ? user.getMediaUrl() : ""
+            );
+            
+            return ResponseEntity.ok(userInfo);
+        } catch (BusinessException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            log.error("Get current user error: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to get user info"));
+        }
+    }
+
 }
