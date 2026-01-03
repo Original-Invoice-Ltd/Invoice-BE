@@ -1,96 +1,85 @@
 package invoice.controllers;
 
-import invoice.services.NotificationEventPublisher;
-import lombok.RequiredArgsConstructor;
+import invoice.dtos.request.CreateInvoiceRequest;
+import invoice.dtos.response.InvoiceResponse;
+import invoice.exception.OriginalInvoiceBaseException;
+import invoice.services.InvoiceService;
+import lombok.AllArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
+import java.util.List;
+import java.util.UUID;
+
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 @RestController
 @RequestMapping("/api/invoices")
-@RequiredArgsConstructor
-@CrossOrigin(origins = {"http://localhost:3000", "https://your-frontend-domain.com"})
+@AllArgsConstructor
 public class InvoiceController {
-    
-    private final NotificationEventPublisher notificationEventPublisher;
-    
-    @PostMapping
-    public ResponseEntity<Map<String, Object>> createInvoice(
-            Authentication authentication,
-            @RequestBody Map<String, Object> invoiceData) {
-        
-        String userId = authentication.getName();
-        
-        // Your existing invoice creation logic here
-        // Check if user has reached invoice limit
-        // ...
-        
-        String invoiceId = "invoice_" + System.currentTimeMillis(); // Replace with actual ID
-        
-        return ResponseEntity.ok(Map.of(
-            "message", "Invoice created successfully",
-            "invoiceId", invoiceId
-        ));
+    private final InvoiceService invoiceService;
+
+    @PostMapping(path = "/add",consumes = {"multipart/form-data"})
+    public ResponseEntity<?> createInvoice(@ModelAttribute CreateInvoiceRequest request) {
+        try{
+            InvoiceResponse response = invoiceService.createInvoice(request);
+            return new ResponseEntity<>(response, HttpStatus.CREATED);
+        }catch (OriginalInvoiceBaseException ex){
+            return new ResponseEntity<>(ex.getMessage(),BAD_REQUEST);
+        }
     }
-    
-    @PostMapping("/{invoiceId}/send")
-    public ResponseEntity<Map<String, Object>> sendInvoice(
-            Authentication authentication,
-            @PathVariable String invoiceId,
-            @RequestBody Map<String, Object> sendData) {
-        
-        String userId = authentication.getName();
-        String clientName = (String) sendData.get("clientName");
-        
-        // Your existing invoice sending logic here
-        // ...
-        
-        // Publish notification event
-        notificationEventPublisher.publishInvoiceSentEvent(userId, clientName, invoiceId);
-        
-        return ResponseEntity.ok(Map.of(
-            "message", "Invoice sent successfully",
-            "invoiceId", invoiceId
-        ));
+
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getInvoiceById(@PathVariable UUID id) {
+        try {
+            InvoiceResponse response = invoiceService.getInvoiceById(id);
+            return ResponseEntity.ok(response);
+        }catch (OriginalInvoiceBaseException ex){
+            return new ResponseEntity<>(ex.getMessage(),BAD_REQUEST);
+        }
     }
-    
-    @PostMapping("/limit-reached")
-    public ResponseEntity<Map<String, Object>> handleInvoiceLimitReached(Authentication authentication) {
-        String userId = authentication.getName();
-        
-        // Publish notification event
-        notificationEventPublisher.publishInvoiceLimitReachedEvent(userId);
-        
-        return ResponseEntity.ok(Map.of("message", "Invoice limit notification sent"));
+
+    @GetMapping("/all-user")
+    public ResponseEntity<?> getAllUserInvoices() {
+        try {
+            List<InvoiceResponse> responses = invoiceService.getAllUserInvoices();
+            return ResponseEntity.ok(responses);
+        }catch (OriginalInvoiceBaseException ex){
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
     }
-    
-    @PostMapping("/{invoiceId}/payment-received")
-    public ResponseEntity<Map<String, Object>> recordPayment(
-            Authentication authentication,
-            @PathVariable String invoiceId,
-            @RequestBody Map<String, Object> paymentData) {
-        
-        String userId = authentication.getName();
-        String amount = (String) paymentData.get("amount");
-        String clientName = (String) paymentData.get("clientName");
-        
-        // Your existing payment recording logic here
-        // ...
-        
-        // Publish notification event
-        notificationEventPublisher.publishPaymentReceivedEvent(userId, amount, clientName, invoiceId);
-        
-        return ResponseEntity.ok(Map.of(
-            "message", "Payment recorded successfully",
-            "invoiceId", invoiceId
-        ));
+
+    @GetMapping("/get-all")
+    public ResponseEntity<?> getAllInvoices() {
+        try {
+            List<InvoiceResponse> responses = invoiceService.getAllInvoices();
+            return ResponseEntity.ok(responses);
+        }catch (OriginalInvoiceBaseException ex){
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
     }
-    
-    @GetMapping
-    public ResponseEntity<Map<String, Object>> getInvoices(Authentication authentication) {
-        // Your existing logic to fetch invoices
-        return ResponseEntity.ok(Map.of("invoices", "Your invoice list here"));
+
+    @PatchMapping(value = "/update/{id}", consumes = {"multipart/form-data"})
+    public ResponseEntity<?> updateInvoice(
+            @PathVariable UUID id,
+            @ModelAttribute CreateInvoiceRequest request) {
+        try{
+            InvoiceResponse updated = invoiceService.updateInvoice(id, request);
+            return ResponseEntity.ok(updated);
+        }catch (OriginalInvoiceBaseException ex){
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<Void> deleteInvoice(@PathVariable UUID id) {
+        try {
+            invoiceService.deleteInvoice(id);
+            return ResponseEntity.noContent().build();
+        }catch (OriginalInvoiceBaseException ex){
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
     }
 }
