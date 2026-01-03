@@ -5,6 +5,8 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import invoice.data.models.*;
 import invoice.data.repositories.*;
@@ -21,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import invoice.config.CloudinaryService;
 import invoice.dtos.request.CreateInvoiceRequest;
+import invoice.dtos.response.CreateInvoiceResponse;
 import invoice.services.InvoiceService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -246,37 +249,10 @@ public class InvoiceServiceImplementation implements InvoiceService {
             throw new RuntimeException("Access denied: Invoice does not belong to current user");
         }
 
-        // Validate client if provided
-        Client client = null;
-        if (request.getClientId() != null) {
-            client = clientRepository.findById(request.getClientId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Client not found"));
-            existingInvoice.setClientId(client.getId());
-        } else {
-            // Use existing client
-            client = clientRepository.findById(existingInvoice.getClientId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Client not found"));
-        }
-
         String oldLogoUrl = existingInvoice.getLogoUrl();
         String oldSignatureUrl = existingInvoice.getSignatureUrl();
         String oldInvoiceNumber = existingInvoice.getInvoiceNumber();
-
-        // Update invoice fields from request
-        if (request.getTitle() != null) existingInvoice.setTitle(request.getTitle());
-        if (request.getPaymentTerms() != null) existingInvoice.setPaymentTerms(request.getPaymentTerms());
-        if (request.getInvoiceDate() != null) existingInvoice.setInvoiceDate(request.getInvoiceDate());
-        if (request.getDueDate() != null) existingInvoice.setDueDate(request.getDueDate());
-        if (request.getNote() != null) existingInvoice.setNote(request.getNote());
-        if (request.getTermsAndConditions() != null) existingInvoice.setTermsAndConditions(request.getTermsAndConditions());
-        if (request.getLanguage() != null) existingInvoice.setLanguage(request.getLanguage());
-        if (request.getCurrency() != null) existingInvoice.setCurrency(request.getCurrency());
-        if (request.getInvoiceColor() != null) existingInvoice.setInvoiceColor(request.getInvoiceColor());
-        if (request.getSubtotal() != null) existingInvoice.setSubtotal(request.getSubtotal());
-        if (request.getTotalDue() != null) existingInvoice.setTotalDue(request.getTotalDue());
-        if (request.getItems() != null) existingInvoice.setItems(request.getItems());
-
-        // Handle logo upload
+        modelMapper.map(request, existingInvoice);
         try {
             if (request.getLogo() != null && !request.getLogo().isEmpty()) {
                 String newLogoUrl = cloudinaryService.uploadFile(request.getLogo());
@@ -286,7 +262,6 @@ public class InvoiceServiceImplementation implements InvoiceService {
             throw new RuntimeException("Failed to upload updated logo", e);
         }
 
-        // Handle signature upload
         try {
             if (request.getSignature() != null && !request.getSignature().isEmpty()) {
                 String newSignatureUrl = cloudinaryService.uploadFile(request.getSignature());
@@ -297,8 +272,7 @@ public class InvoiceServiceImplementation implements InvoiceService {
         }
         
         // Handle invoice number update
-        if (request.getInvoiceNumber() != null && !request.getInvoiceNumber().trim().isEmpty() 
-                && !request.getInvoiceNumber().equals(oldInvoiceNumber)) {
+        if (request.getInvoiceNumber() != null && !request.getInvoiceNumber().equals(oldInvoiceNumber)) {
             // Check if the new invoice number already exists for this user (excluding current invoice)
             invoiceRepository.findByInvoiceNumberAndUserId(request.getInvoiceNumber(), currentUser.getId())
                     .ifPresent(existingInv -> {
@@ -312,24 +286,9 @@ public class InvoiceServiceImplementation implements InvoiceService {
                     oldInvoiceNumber, request.getInvoiceNumber(), currentUser.getEmail());
         }
 
-        // Update or create sender information
-        InvoiceSender sender = invoiceSenderRepository.findByInvoice(existingInvoice.getId())
-                .orElse(new InvoiceSender());
-        
-        if (request.getFullName() != null) sender.setFullName(request.getFullName());
-        if (request.getEmail() != null) sender.setEmail(request.getEmail());
-        if (request.getPhone() != null) sender.setPhone(request.getPhone());
-        if (request.getAddress() != null && !request.getAddress().isEmpty()) {
-            sender.setAddress(request.getAddress());
-        }
-        sender.setInvoice(existingInvoice);
-
         Invoice updatedInvoice = invoiceRepository.save(existingInvoice);
-        invoiceSenderRepository.save(sender);
-        
         log.info("Invoice updated successfully with ID: {} for user: {}", updatedInvoice.getId(), currentUser.getEmail());
 
-        // Clean up old files if new ones were uploaded
         if (request.getLogo() != null && !request.getLogo().isEmpty() && oldLogoUrl != null) {
             cloudinaryService.deleteFile(oldLogoUrl);
         }
@@ -337,7 +296,7 @@ public class InvoiceServiceImplementation implements InvoiceService {
             cloudinaryService.deleteFile(oldSignatureUrl);
         }
 
-        return mapToResponse(updatedInvoice, client, sender);
+        return modelMapper.map(updatedInvoice, InvoiceResponse.class);
     }
 
     @Override
