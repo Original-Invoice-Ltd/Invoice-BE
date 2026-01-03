@@ -48,4 +48,6 @@ public interface UserService {
     boolean resetPasswordWithOTP(String email, String otp, String newPassword);
 
     SignUpResponse register(SignUpRequest signUpRequest);
+    
+    String updatePhoneNumber(String email, String phoneNumber);
 }
