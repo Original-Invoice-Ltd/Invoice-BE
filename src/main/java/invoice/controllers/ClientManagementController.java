@@ -18,98 +18,89 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 @RestController
 @RequestMapping("/api/client")
 @AllArgsConstructor
-public class ClientController {
+public class ClientManagementController {
     private final ClientService clientService;
 
     @PostMapping("/add")
     public ResponseEntity<?> addClient(Principal principal, @RequestBody ClientRequest clientRequest) {
-        try{
+        try {
             String email = principal.getName();
-            String response = clientService.addClient(email,clientRequest);
+            String response = clientService.addClient(email, clientRequest);
             return new ResponseEntity<>(response, HttpStatus.CREATED);
-        }
-        catch (OriginalInvoiceBaseException ex){
+        } catch (OriginalInvoiceBaseException ex) {
             return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
         }
     }
 
     @PutMapping("/update")
     public ResponseEntity<?> updateClient(@RequestParam UUID id, @RequestBody ClientRequest clientRequest) {
-        try{
-            String response = clientService.updateClient(id,clientRequest);
+        try {
+            String response = clientService.updateClient(id, clientRequest);
             return new ResponseEntity<>(response, HttpStatus.OK);
-        }
-        catch (OriginalInvoiceBaseException ex){
+        } catch (OriginalInvoiceBaseException ex) {
             return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
         }
     }
 
     @GetMapping("/find-by-id")
     public ResponseEntity<?> getClient(@RequestParam UUID id) {
-        try{
+        try {
             ClientResponse response = clientService.getClient(id);
             return new ResponseEntity<>(response, HttpStatus.OK);
-        }
-        catch (OriginalInvoiceBaseException ex){
+        } catch (OriginalInvoiceBaseException ex) {
             return new ResponseEntity<>(ex.getMessage(), HttpStatus.NOT_FOUND);
         }
     }
 
     @GetMapping("/all")
     public ResponseEntity<?> getAllClients() {
-        try{
+        try {
             List<ClientResponse> response = clientService.getAllClients();
             return new ResponseEntity<>(response, HttpStatus.OK);
-        }
-        catch (OriginalInvoiceBaseException ex){
+        } catch (OriginalInvoiceBaseException ex) {
             return new ResponseEntity<>(ex.getMessage(), HttpStatus.NOT_FOUND);
         }
     }
 
     @GetMapping("/all-user")
     public ResponseEntity<?> getAllUserClients(Principal principal) {
-        try{
+        try {
             String email = principal.getName();
             List<ClientResponse> response = clientService.getAllUserClients(email);
             return new ResponseEntity<>(response, HttpStatus.OK);
-        }
-        catch (OriginalInvoiceBaseException ex){
+        } catch (OriginalInvoiceBaseException ex) {
             return new ResponseEntity<>(ex.getMessage(), HttpStatus.NOT_FOUND);
         }
     }
 
     @DeleteMapping("/all-user")
     public ResponseEntity<?> deleteAllUserClients(Principal principal) {
-        try{
+        try {
             String email = principal.getName();
             String response = clientService.deleteAllUserClients(email);
             return new ResponseEntity<>(response, HttpStatus.OK);
-        }
-        catch (OriginalInvoiceBaseException ex){
+        } catch (OriginalInvoiceBaseException ex) {
             return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
         }
     }
 
     @DeleteMapping("/all")
     public ResponseEntity<?> deleteAllClients() {
-        try{
+        try {
             String response = clientService.deleteAllClients();
             return new ResponseEntity<>(response, HttpStatus.OK);
-        }
-        catch (OriginalInvoiceBaseException ex){
+        } catch (OriginalInvoiceBaseException ex) {
             return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
         }
     }
 
     @DeleteMapping("/delete-by-id")
     public ResponseEntity<?> deleteClient(@RequestParam UUID id) {
-        try{
+        try {
             String response = clientService.deleteClient(id);
             return new ResponseEntity<>(response, HttpStatus.OK);
-        }
-        catch (OriginalInvoiceBaseException ex){
+        } catch (OriginalInvoiceBaseException ex) {
             return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
         }
     }
-
 }

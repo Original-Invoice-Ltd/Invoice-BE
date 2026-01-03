@@ -283,6 +283,7 @@ public class UserServiceImpl implements UserService {
                 .email(signUpRequest.getEmail())
                 .status(PENDING)
                 .fullName(signUpRequest.getFullName())
+                .phoneNumber(signUpRequest.getPhoneNumber())
                 .password(passwordEncoder.encode(signUpRequest.getPassword()))
                 .build();
         user.setRoles(new HashSet<>());
@@ -295,6 +296,17 @@ public class UserServiceImpl implements UserService {
         response.setMessage("User registered successfully.");
         response.setCreatedAt(user.getCreatedAt());
         return response;
+    }
+
+    @Override
+    public String updatePhoneNumber(String email, String phoneNumber) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException("User not found"));
+        
+        user.setPhoneNumber(phoneNumber);
+        userRepository.save(user);
+        
+        return "Phone number updated successfully";
     }
 
 
