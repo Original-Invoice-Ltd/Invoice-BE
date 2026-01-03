@@ -32,10 +32,14 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .addFilterBefore(authorizationFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
+                        // Public endpoints - no auth required
                         .requestMatchers(PUBLIC_ENDPOINTS.toArray(new String[0])).permitAll()
+                        // Admin-only endpoints
                         .requestMatchers("/api/users/delete-user","/api/users/all","/api/users/allCount","/api/users/delete-by-email","/api/users/disable-user").hasAnyAuthority("ADMIN","SUPER_ADMIN")
                         .requestMatchers("/api/users/add-admin").hasAuthority("SUPER_ADMIN")
+                        // User endpoints requiring authentication
                         .requestMatchers("/api/users/upload-photo").hasAnyAuthority("USER","ADMIN","SUPER_ADMIN")
+                        // Everything else requires authentication
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(STATELESS))
