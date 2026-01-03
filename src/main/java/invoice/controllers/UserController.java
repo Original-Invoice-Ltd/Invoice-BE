@@ -25,9 +25,11 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.security.Principal;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static java.time.temporal.ChronoUnit.MINUTES;
@@ -147,6 +149,20 @@ public class UserController {
     }
 
 
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser(Principal principal) {
+        try {
+            if (principal == null) {
+                return new ResponseEntity<>("User not authenticated", HttpStatus.UNAUTHORIZED);
+            }
+            
+            UserResponse response = userService.getProfileFor(principal.getName());
+            return ResponseEntity.ok(response);
+        } catch (OriginalInvoiceBaseException e) {
+            return new ResponseEntity<>(e.getMessage(), BAD_REQUEST);
+        }
+    }
+
     @GetMapping("/get-profile")
     public ResponseEntity<?>getUserProfile(@RequestParam String email){
         try{
@@ -199,6 +215,23 @@ public class UserController {
             return new ResponseEntity<>(response, OK);
         }
         catch (OriginalInvoiceBaseException ex){
+            return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
+        }
+    }
+
+    @PutMapping("/update-phone")
+    public ResponseEntity<?> updatePhoneNumber(@RequestBody Map<String, String> request) {
+        try {
+            String email = request.get("email");
+            String phoneNumber = request.get("phoneNumber");
+            
+            if (email == null || phoneNumber == null) {
+                return new ResponseEntity<>("Email and phone number are required", BAD_REQUEST);
+            }
+            
+            String response = userService.updatePhoneNumber(email, phoneNumber);
+            return new ResponseEntity<>(response, OK);
+        } catch (OriginalInvoiceBaseException ex) {
             return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
         }
     }
