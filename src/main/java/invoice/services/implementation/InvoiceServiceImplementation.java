@@ -10,11 +10,13 @@ import java.util.regex.Pattern;
 
 import invoice.data.models.*;
 import invoice.data.repositories.*;
+import invoice.dtos.request.InvoiceItemRequest;
 import invoice.dtos.response.ClientResponse;
 import invoice.dtos.response.InvoiceItemResponse;
 import invoice.dtos.response.InvoiceResponse;
 import invoice.dtos.response.InvoiceSenderResponse;
 import invoice.exception.ResourceNotFoundException;
+import invoice.data.constants.Item_Category;
 import org.modelmapper.ModelMapper;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -67,7 +69,81 @@ public class InvoiceServiceImplementation implements InvoiceService {
             throw new RuntimeException("Failed to upload signature file", e);
         }
 
-        Invoice invoice = modelMapper.map(request, Invoice.class);
+        // Create invoice entity manually to avoid detached entity issues
+        Invoice invoice = new Invoice();
+        
+        // Map basic fields from request (excluding items which need special handling)
+        invoice.setTitle(request.getTitle());
+        invoice.setInvoiceColor(request.getInvoiceColor());
+        invoice.setCreationDate(request.getInvoiceDate() != null ? request.getInvoiceDate().atStartOfDay() : null);
+        invoice.setDueDate(request.getDueDate() != null ? request.getDueDate().atStartOfDay() : null);
+        invoice.setPaymentTerms(request.getPaymentTerms());
+        invoice.setAccountNumber(request.getAccountNumber());
+        invoice.setAccountName(request.getAccountName());
+        invoice.setBank(request.getBank());
+        invoice.setCurrency(request.getCurrency());
+        invoice.setSubtotal(request.getSubtotal());
+        invoice.setTotalDue(request.getTotalDue());
+        invoice.setNote(request.getNote());
+        invoice.setTermsAndConditions(request.getTermsAndConditions());
+        
+        // Handle invoice items manually to avoid detached entity issues
+        if (request.getItems() != null && !request.getItems().isEmpty()) {
+            for (InvoiceItemRequest itemRequest : request.getItems()) {
+                InvoiceItem item = new InvoiceItem();
+                item.setItemName(itemRequest.getItemName());
+                item.setDescription(itemRequest.getDescription());
+                item.setQuantity(itemRequest.getQuantity());
+                item.setRate(itemRequest.getRate());
+                item.setAmount(itemRequest.getAmount());
+                item.setTax(itemRequest.getTax());
+                
+                // Set category if provided
+                if (itemRequest.getCategory() != null) {
+                    try {
+                        item.setCategory(Item_Category.valueOf(itemRequest.getCategory().toUpperCase()));
+                    } catch (IllegalArgumentException e) {
+                        log.warn("Invalid category '{}' for item '{}', skipping category", 
+                                itemRequest.getCategory(), itemRequest.getItemName());
+                    }
+                }
+                
+                // Handle taxes if provided
+                if (itemRequest.getTaxIds() != null && !itemRequest.getTaxIds().isEmpty()) {
+                    for (UUID taxId : itemRequest.getTaxIds()) {
+                        Tax tax = taxRepository.findById(taxId).orElse(null);
+                        if (tax != null) {
+                            InvoiceItemTax itemTax = new InvoiceItemTax();
+                            itemTax.setTax(tax);
+                            
+                            // Calculate tax amount based on item amount and tax rate
+                            if (item.getAmount() != null && tax.getBaseTaxRate() != null) {
+                                BigDecimal taxableAmount = item.getAmount();
+                                BigDecimal appliedRate = tax.getBaseTaxRate();
+                                BigDecimal taxAmount = taxableAmount
+                                        .multiply(appliedRate)
+                                        .divide(BigDecimal.valueOf(100), 2, BigDecimal.ROUND_HALF_UP);
+                                
+                                itemTax.setTaxableAmount(taxableAmount);
+                                itemTax.setAppliedRate(appliedRate);
+                                itemTax.setTaxAmount(taxAmount);
+                            } else {
+                                // Set default values if calculation not possible
+                                itemTax.setTaxableAmount(BigDecimal.ZERO);
+                                itemTax.setAppliedRate(BigDecimal.ZERO);
+                                itemTax.setTaxAmount(BigDecimal.ZERO);
+                            }
+                            
+                            item.addItemTax(itemTax);
+                        }
+                    }
+                }
+                
+                // Add item to invoice using helper method to maintain bidirectional relationship
+                invoice.addItem(item);
+            }
+        }
+        
         InvoiceSender sender = new InvoiceSender();
         sender.setEmail(request.getEmail());
         sender.setFullName(request.getFullName());
@@ -252,7 +328,82 @@ public class InvoiceServiceImplementation implements InvoiceService {
         String oldLogoUrl = existingInvoice.getLogoUrl();
         String oldSignatureUrl = existingInvoice.getSignatureUrl();
         String oldInvoiceNumber = existingInvoice.getInvoiceNumber();
-        modelMapper.map(request, existingInvoice);
+        
+        // Update basic fields manually to avoid detached entity issues
+        existingInvoice.setTitle(request.getTitle());
+        existingInvoice.setInvoiceColor(request.getInvoiceColor());
+        existingInvoice.setCreationDate(request.getInvoiceDate() != null ? request.getInvoiceDate().atStartOfDay() : null);
+        existingInvoice.setDueDate(request.getDueDate() != null ? request.getDueDate().atStartOfDay() : null);
+        existingInvoice.setPaymentTerms(request.getPaymentTerms());
+        existingInvoice.setAccountNumber(request.getAccountNumber());
+        existingInvoice.setAccountName(request.getAccountName());
+        existingInvoice.setBank(request.getBank());
+        existingInvoice.setCurrency(request.getCurrency());
+        existingInvoice.setSubtotal(request.getSubtotal());
+        existingInvoice.setTotalDue(request.getTotalDue());
+        existingInvoice.setNote(request.getNote());
+        existingInvoice.setTermsAndConditions(request.getTermsAndConditions());
+        
+        // Handle invoice items update manually to avoid detached entity issues
+        if (request.getItems() != null) {
+            // Clear existing items
+            existingInvoice.getItems().clear();
+            
+            // Add new items
+            for (InvoiceItemRequest itemRequest : request.getItems()) {
+                InvoiceItem item = new InvoiceItem();
+                item.setItemName(itemRequest.getItemName());
+                item.setDescription(itemRequest.getDescription());
+                item.setQuantity(itemRequest.getQuantity());
+                item.setRate(itemRequest.getRate());
+                item.setAmount(itemRequest.getAmount());
+                item.setTax(itemRequest.getTax());
+                
+                // Set category if provided
+                if (itemRequest.getCategory() != null) {
+                    try {
+                        item.setCategory(Item_Category.valueOf(itemRequest.getCategory().toUpperCase()));
+                    } catch (IllegalArgumentException e) {
+                        log.warn("Invalid category '{}' for item '{}', skipping category", 
+                                itemRequest.getCategory(), itemRequest.getItemName());
+                    }
+                }
+                
+                // Handle taxes if provided
+                if (itemRequest.getTaxIds() != null && !itemRequest.getTaxIds().isEmpty()) {
+                    for (UUID taxId : itemRequest.getTaxIds()) {
+                        Tax tax = taxRepository.findById(taxId).orElse(null);
+                        if (tax != null) {
+                            InvoiceItemTax itemTax = new InvoiceItemTax();
+                            itemTax.setTax(tax);
+                            
+                            // Calculate tax amount based on item amount and tax rate
+                            if (item.getAmount() != null && tax.getBaseTaxRate() != null) {
+                                BigDecimal taxableAmount = item.getAmount();
+                                BigDecimal appliedRate = tax.getBaseTaxRate();
+                                BigDecimal taxAmount = taxableAmount
+                                        .multiply(appliedRate)
+                                        .divide(BigDecimal.valueOf(100), 2, BigDecimal.ROUND_HALF_UP);
+                                
+                                itemTax.setTaxableAmount(taxableAmount);
+                                itemTax.setAppliedRate(appliedRate);
+                                itemTax.setTaxAmount(taxAmount);
+                            } else {
+                                // Set default values if calculation not possible
+                                itemTax.setTaxableAmount(BigDecimal.ZERO);
+                                itemTax.setAppliedRate(BigDecimal.ZERO);
+                                itemTax.setTaxAmount(BigDecimal.ZERO);
+                            }
+                            
+                            item.addItemTax(itemTax);
+                        }
+                    }
+                }
+                
+                // Add item to invoice using helper method to maintain bidirectional relationship
+                existingInvoice.addItem(item);
+            }
+        }
         try {
             if (request.getLogo() != null && !request.getLogo().isEmpty()) {
                 String newLogoUrl = cloudinaryService.uploadFile(request.getLogo());
@@ -296,7 +447,13 @@ public class InvoiceServiceImplementation implements InvoiceService {
             cloudinaryService.deleteFile(oldSignatureUrl);
         }
 
-        return modelMapper.map(updatedInvoice, InvoiceResponse.class);
+        // Get client and sender for response mapping
+        Client client = clientRepository.findById(updatedInvoice.getClientId())
+                .orElseThrow(() -> new ResourceNotFoundException("client not found"));
+        InvoiceSender sender = invoiceSenderRepository.findByInvoice(updatedInvoice.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Sender not found"));
+        
+        return mapToResponse(updatedInvoice, client, sender);
     }
 
     @Override
