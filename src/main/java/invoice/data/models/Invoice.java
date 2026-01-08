@@ -61,6 +61,10 @@ public class Invoice {
     @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<InvoiceItem> items = new ArrayList<>();
     
+    // Invoice-level taxes
+    @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    private List<InvoiceTax> invoiceTaxes = new ArrayList<>();
+    
     private Double subtotal;
     private Double totalTaxAmount; // Total of all taxes applied
     private Double totalDue;
@@ -78,17 +82,28 @@ public class Invoice {
         item.setInvoice(null);
     }
     
+    // Helper methods to manage invoice taxes
+    public void addInvoiceTax(InvoiceTax invoiceTax) {
+        invoiceTaxes.add(invoiceTax);
+        invoiceTax.setInvoice(this);
+    }
+    
+    public void removeInvoiceTax(InvoiceTax invoiceTax) {
+        invoiceTaxes.remove(invoiceTax);
+        invoiceTax.setInvoice(null);
+    }
+    
     /**
-     * Calculate total tax amount for all items in this invoice
+     * Calculate total tax amount from invoice-level taxes
      */
     public Double calculateTotalTaxAmount() {
-        return items.stream()
-                .mapToDouble(item -> item.getTotalTaxAmount().doubleValue())
+        return invoiceTaxes.stream()
+                .mapToDouble(invoiceTax -> invoiceTax.getTaxAmount().doubleValue())
                 .sum();
     }
     
     /**
-     * Calculate subtotal (sum of all item amounts without tax)
+     * Calculate subtotal (sum of all item amounts)
      */
     public Double calculateSubtotal() {
         return items.stream()
