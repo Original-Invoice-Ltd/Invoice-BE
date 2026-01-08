@@ -30,6 +30,7 @@ public class InvoiceResponse {
     private String status;
     private String currency;
     private List<InvoiceItemResponse> items;
+    private List<InvoiceTaxResponse> appliedTaxes; // Invoice-level taxes
     private Double subtotal;
     private Double totalTaxAmount;
     private Double totalDue;
@@ -56,10 +57,17 @@ public class InvoiceResponse {
         this.status = invoice.getStatus() != null ? invoice.getStatus().toString() : null;
         this.currency = invoice.getCurrency();
         
-        // Safe mapping of invoice items with tax information
+        // Safe mapping of invoice items
         this.items = invoice.getItems() != null ? 
             invoice.getItems().stream()
                 .map(InvoiceItemResponse::new)
+                .collect(Collectors.toList()) : 
+            List.of();
+        
+        // Safe mapping of invoice-level taxes
+        this.appliedTaxes = invoice.getInvoiceTaxes() != null ? 
+            invoice.getInvoiceTaxes().stream()
+                .map(InvoiceTaxResponse::new)
                 .collect(Collectors.toList()) : 
             List.of();
         
@@ -67,7 +75,7 @@ public class InvoiceResponse {
         this.subtotal = invoice.getSubtotal() != null ? invoice.getSubtotal() : 
                        (invoice.getItems() != null ? invoice.calculateSubtotal() : 0.0);
         this.totalTaxAmount = invoice.getTotalTaxAmount() != null ? invoice.getTotalTaxAmount() : 
-                             (invoice.getItems() != null ? invoice.calculateTotalTaxAmount() : 0.0);
+                             (invoice.getInvoiceTaxes() != null ? invoice.calculateTotalTaxAmount() : 0.0);
         this.totalDue = invoice.getTotalDue() != null ? invoice.getTotalDue() : 
                        (invoice.getItems() != null ? invoice.calculateTotalDue() : 0.0);
         
