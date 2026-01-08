@@ -44,10 +44,6 @@ public class Product {
     @Column(precision = 15, scale = 2)
     private BigDecimal amount;
     
-    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-    @JoinColumn(name = "product_id")
-    private List<Tax> taxes = new ArrayList<>();
-    
     @Setter(AccessLevel.NONE)
     @JsonSerialize(using = LocalDateTimeSerializer.class)
     @JsonDeserialize(using = LocalDateTimeDeserializer.class)
@@ -66,27 +62,5 @@ public class Product {
     @PreUpdate
     private void onUpdate(){
         updatedAt = LocalDateTime.now();
-    }
-    
-    /**
-     * Calculate total tax amount for this product
-     */
-    public BigDecimal getTotalTaxAmount() {
-        return taxes.stream()
-                .map(tax -> {
-                    if (amount != null && tax.getBaseTaxRate() != null) {
-                        return amount.multiply(tax.getBaseTaxRate().divide(BigDecimal.valueOf(100)));
-                    }
-                    return BigDecimal.ZERO;
-                })
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-    
-    /**
-     * Get the final amount including all taxes
-     */
-    public BigDecimal getAmountWithTax() {
-        BigDecimal baseAmount = amount != null ? amount : BigDecimal.ZERO;
-        return baseAmount.add(getTotalTaxAmount());
     }
 }

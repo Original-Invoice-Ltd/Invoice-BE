@@ -7,9 +7,9 @@ import java.util.List;
 import java.util.UUID;
 
 public interface ProductService {
-    String addProduct(String email, ProductRequest productRequest);
+    ProductResponse addProduct(String email, ProductRequest productRequest);
 
-    String updateProduct(UUID id, ProductRequest productRequest);
+    ProductResponse updateProduct(UUID id, ProductRequest productRequest);
 
     ProductResponse getProduct(UUID id);
 
@@ -24,4 +24,6 @@ public interface ProductService {
     String deleteAllProducts();
 
     String deleteProduct(UUID id);
+    
+    boolean canDeleteProduct(UUID productId);
 }

@@ -21,6 +21,4 @@ public class InvoiceItemRequest {
     private Integer quantity;
     private BigDecimal rate;
     private BigDecimal amount;
-    private BigDecimal tax; // Legacy field for backward compatibility
-    private List<UUID> taxIds; // List of tax IDs to apply to this item
 }
