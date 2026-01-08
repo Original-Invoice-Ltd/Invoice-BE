@@ -25,7 +25,7 @@ public class ProductController {
     public ResponseEntity<?> addProduct(Principal principal, @RequestBody ProductRequest productRequest) {
         try {
             String email = principal.getName();
-            String response = productService.addProduct(email, productRequest);
+            ProductResponse response = productService.addProduct(email, productRequest);
             return new ResponseEntity<>(response, HttpStatus.CREATED);
         } catch (OriginalInvoiceBaseException ex) {
             return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
@@ -35,7 +35,7 @@ public class ProductController {
     @PutMapping("/update")
     public ResponseEntity<?> updateProduct(@RequestParam UUID id, @RequestBody ProductRequest productRequest) {
         try {
-            String response = productService.updateProduct(id, productRequest);
+            ProductResponse response = productService.updateProduct(id, productRequest);
             return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (OriginalInvoiceBaseException ex) {
             return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
@@ -110,8 +110,19 @@ public class ProductController {
         try {
             String response = productService.deleteProduct(id);
             return new ResponseEntity<>(response, HttpStatus.OK);
-        } catch (OriginalInvoiceBaseException ex) {
+        } catch (RuntimeException ex) {
+            // Handle both OriginalInvoiceBaseException and other RuntimeExceptions
             return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
+        }
+    }
+    
+    @GetMapping("/can-delete")
+    public ResponseEntity<?> canDeleteProduct(@RequestParam UUID id) {
+        try {
+            boolean canDelete = productService.canDeleteProduct(id);
+            return new ResponseEntity<>(canDelete, HttpStatus.OK);
+        } catch (Exception ex) {
+            return new ResponseEntity<>(false, HttpStatus.OK);
         }
     }
 }

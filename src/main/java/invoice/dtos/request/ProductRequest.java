@@ -20,5 +20,4 @@ public class ProductRequest {
     private Integer quantity;
     private BigDecimal rate;
     private BigDecimal amount;
-    private List<UUID> taxIds; // List of tax IDs to apply to this product
 }
