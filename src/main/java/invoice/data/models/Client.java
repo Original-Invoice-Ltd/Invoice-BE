@@ -23,7 +23,7 @@ public class Client {
     @Column(columnDefinition = "UUID", updatable = false, nullable = false)
     private UUID id;
     @Enumerated(EnumType.STRING)
-    private CustomerType customerType;
+    private CustomerType customerType = CustomerType.INDIVIDUAL; // Default value
     private String title;
     private String fullName;
     private String businessName;
@@ -46,6 +46,10 @@ public class Client {
     @PrePersist
     private void onCreate(){
         createdAt = LocalDateTime.now();
+        // Ensure customerType is never null
+        if (customerType == null) {
+            customerType = CustomerType.INDIVIDUAL;
+        }
     }
 
     @PreUpdate

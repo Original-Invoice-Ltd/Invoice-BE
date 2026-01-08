@@ -38,5 +38,6 @@ public class CreateInvoiceRequest {
     private String termsAndConditions;//large text optional
     private List<Long>itemIds;//optional
     private List<InvoiceItemRequest> items; // Invoice items to be created
+    private List<UUID> taxIds; // List of tax IDs to apply to the entire invoice
 
 }
