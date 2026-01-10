@@ -30,7 +30,6 @@ import invoice.dtos.request.CreateInvoiceRequest;
 import invoice.dtos.response.CreateInvoiceResponse;
 import invoice.services.InvoiceService;
 import invoice.services.EmailService;
-import invoice.services.NotificationEventPublisher;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -48,7 +47,7 @@ public class InvoiceServiceImplementation implements InvoiceService {
     private final InvoiceTaxRepository invoiceTaxRepository;
     private final InvoiceSenderRepository invoiceSenderRepository;
     private final EmailService emailService;
-    private final NotificationEventPublisher notificationEventPublisher;
+    private final NotificationService notificationService;
 
 
     @Override
@@ -233,15 +232,18 @@ public class InvoiceServiceImplementation implements InvoiceService {
             // Don't throw exception - invoice creation should succeed even if email fails
         }
         
-        // Publish invoice sent event for in-app notifications
+        // Create notification for invoice sent
         try {
-            notificationEventPublisher.publishInvoiceSentEvent(
-                    currentUser.getId().toString(),
-                    recipient.getFullName(),
-                    savedInvoice.getId().toString()
+            notificationService.createNotification(
+                currentUser,
+                "Invoice sent",
+                "Your invoice to " + recipient.getFullName() + " was delivered successfully and is now viewable.",
+                NotificationType.INVOICE_CREATED,
+                savedInvoice.getId(),
+                "INVOICE"
             );
         } catch (Exception e) {
-            log.warn("Failed to publish invoice sent event: {}", e.getMessage());
+            log.warn("Failed to create invoice sent notification: {}", e.getMessage());
         }
         
         return mapToResponse(savedInvoice, client, sender);
