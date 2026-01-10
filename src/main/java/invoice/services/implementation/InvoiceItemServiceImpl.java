@@ -1,18 +1,14 @@
 package invoice.services.implementation;
 
 import invoice.data.constants.Item_Category;
-import invoice.data.models.Client;
 import invoice.data.models.Invoice;
 import invoice.data.models.InvoiceItem;
-import invoice.data.models.InvoiceItemTax;
-import invoice.data.repositories.ClientRepository;
 import invoice.data.repositories.InvoiceItemRepository;
 import invoice.data.repositories.InvoiceRepository;
 import invoice.dtos.request.InvoiceItemRequest;
 import invoice.dtos.response.InvoiceItemResponse;
 import invoice.exception.ResourceNotFoundException;
 import invoice.services.InvoiceItemService;
-import invoice.services.TaxCalculationService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,17 +25,12 @@ public class InvoiceItemServiceImpl implements InvoiceItemService {
 
     private final InvoiceItemRepository invoiceItemRepository;
     private final InvoiceRepository invoiceRepository;
-    private final ClientRepository clientRepository;
-    private final TaxCalculationService taxCalculationService;
 
     @Override
     @Transactional
     public InvoiceItemResponse addItemToInvoice(UUID invoiceId, InvoiceItemRequest request) {
         Invoice invoice = invoiceRepository.findById(invoiceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Invoice not found"));
-        
-        Client client = clientRepository.findById(invoice.getClientId())
-                .orElseThrow(() -> new ResourceNotFoundException("Client not found"));
 
         InvoiceItem item = new InvoiceItem();
         item.setItemName(request.getItemName());
@@ -48,17 +39,6 @@ public class InvoiceItemServiceImpl implements InvoiceItemService {
         item.setQuantity(request.getQuantity());
         item.setRate(request.getRate());
         item.setAmount(request.getAmount());
-        item.setTax(request.getTax()); // Legacy field
-
-        // Calculate and apply taxes
-        if (request.getTaxIds() != null && !request.getTaxIds().isEmpty()) {
-            List<InvoiceItemTax> itemTaxes = taxCalculationService.calculateItemTaxes(
-                item, request.getTaxIds(), client.getCustomerType());
-            
-            for (InvoiceItemTax itemTax : itemTaxes) {
-                item.addItemTax(itemTax);
-            }
-        }
 
         invoice.addItem(item);
         
@@ -67,8 +47,7 @@ public class InvoiceItemServiceImpl implements InvoiceItemService {
         
         invoiceRepository.save(invoice);
 
-        log.info("Added item '{}' to invoice {} with {} taxes applied", 
-                item.getItemName(), invoiceId, item.getItemTaxes().size());
+        log.info("Added item '{}' to invoice {}", item.getItemName(), invoiceId);
 
         return new InvoiceItemResponse(item);
     }
@@ -80,8 +59,6 @@ public class InvoiceItemServiceImpl implements InvoiceItemService {
                 .orElseThrow(() -> new ResourceNotFoundException("Invoice item not found"));
         
         Invoice invoice = item.getInvoice();
-        Client client = clientRepository.findById(invoice.getClientId())
-                .orElseThrow(() -> new ResourceNotFoundException("Client not found"));
 
         // Update basic item properties
         item.setItemName(request.getItemName());
@@ -90,23 +67,13 @@ public class InvoiceItemServiceImpl implements InvoiceItemService {
         item.setQuantity(request.getQuantity());
         item.setRate(request.getRate());
         item.setAmount(request.getAmount());
-        item.setTax(request.getTax()); // Legacy field
-
-        // Recalculate taxes
-        if (request.getTaxIds() != null) {
-            taxCalculationService.recalculateItemTaxes(item, request.getTaxIds(), client.getCustomerType());
-        } else {
-            // Clear all taxes if no tax IDs provided
-            item.getItemTaxes().clear();
-        }
 
         // Update invoice totals
         updateInvoiceTotals(invoice);
         
         InvoiceItem updated = invoiceItemRepository.save(item);
         
-        log.info("Updated item '{}' with {} taxes applied", 
-                updated.getItemName(), updated.getItemTaxes().size());
+        log.info("Updated item '{}'", updated.getItemName());
 
         return new InvoiceItemResponse(updated);
     }

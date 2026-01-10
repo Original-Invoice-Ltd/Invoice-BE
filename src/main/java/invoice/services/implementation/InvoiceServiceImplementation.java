@@ -10,11 +10,13 @@ import java.util.regex.Pattern;
 
 import invoice.data.models.*;
 import invoice.data.repositories.*;
+import invoice.dtos.request.InvoiceItemRequest;
 import invoice.dtos.response.ClientResponse;
 import invoice.dtos.response.InvoiceItemResponse;
 import invoice.dtos.response.InvoiceResponse;
 import invoice.dtos.response.InvoiceSenderResponse;
 import invoice.exception.ResourceNotFoundException;
+import invoice.data.constants.Item_Category;
 import org.modelmapper.ModelMapper;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -39,6 +41,7 @@ public class InvoiceServiceImplementation implements InvoiceService {
     private final CloudinaryService cloudinaryService;
     private final ClientRepository clientRepository;
     private final TaxRepository taxRepository;
+    private final InvoiceTaxRepository invoiceTaxRepository;
     private InvoiceSenderRepository invoiceSenderRepository;
 
 
@@ -46,8 +49,14 @@ public class InvoiceServiceImplementation implements InvoiceService {
     @Transactional
     public InvoiceResponse createInvoice(CreateInvoiceRequest request) {
         User currentUser = getCurrentUser();
-        Client client = clientRepository.findById(request.getClientId())
-                .orElseThrow(()->new ResourceNotFoundException("client not found"));
+        
+        // Fetch client data if clientId is provided (for populating billTo)
+        Client client = null;
+        if (request.getClientId() != null) {
+            client = clientRepository.findById(request.getClientId())
+                    .orElseThrow(() -> new ResourceNotFoundException("client not found"));
+        }
+        
         String logoUrl = null;
         String signatureUrl = null;
 
@@ -67,7 +76,84 @@ public class InvoiceServiceImplementation implements InvoiceService {
             throw new RuntimeException("Failed to upload signature file", e);
         }
 
-        Invoice invoice = modelMapper.map(request, Invoice.class);
+        // Create invoice entity manually to avoid detached entity issues
+        Invoice invoice = new Invoice();
+        
+        // Map basic fields from request (excluding items which need special handling)
+        invoice.setTitle(request.getTitle());
+        invoice.setInvoiceColor(request.getInvoiceColor());
+        invoice.setCreationDate(request.getInvoiceDate() != null ? request.getInvoiceDate().atStartOfDay() : null);
+        invoice.setDueDate(request.getDueDate() != null ? request.getDueDate().atStartOfDay() : null);
+        invoice.setPaymentTerms(request.getPaymentTerms());
+        invoice.setAccountNumber(request.getAccountNumber());
+        invoice.setAccountName(request.getAccountName());
+        invoice.setBank(request.getBank());
+        invoice.setCurrency(request.getCurrency());
+        invoice.setSubtotal(request.getSubtotal());
+        invoice.setTotalDue(request.getTotalDue());
+        invoice.setNote(request.getNote());
+        invoice.setTermsAndConditions(request.getTermsAndConditions());
+        
+        // Handle invoice items manually to avoid detached entity issues
+        if (request.getItems() != null && !request.getItems().isEmpty()) {
+            for (InvoiceItemRequest itemRequest : request.getItems()) {
+                InvoiceItem item = new InvoiceItem();
+                item.setItemName(itemRequest.getItemName());
+                item.setDescription(itemRequest.getDescription());
+                item.setQuantity(itemRequest.getQuantity());
+                item.setRate(itemRequest.getRate());
+                item.setAmount(itemRequest.getAmount());
+                
+                // Set category if provided
+                if (itemRequest.getCategory() != null) {
+                    try {
+                        item.setCategory(Item_Category.valueOf(itemRequest.getCategory().toUpperCase()));
+                    } catch (IllegalArgumentException e) {
+                        log.warn("Invalid category '{}' for item '{}', skipping category", 
+                                itemRequest.getCategory(), itemRequest.getItemName());
+                    }
+                }
+                
+                // Add item to invoice using helper method to maintain bidirectional relationship
+                invoice.addItem(item);
+            }
+        }
+        
+        // Handle invoice-level taxes if provided
+        if (request.getTaxIds() != null && !request.getTaxIds().isEmpty()) {
+            for (UUID taxId : request.getTaxIds()) {
+                    Tax tax = taxRepository.findById(taxId).orElse(null);
+                    if (tax != null) {
+                        InvoiceTax invoiceTax = new InvoiceTax();
+                        invoiceTax.setTax(tax);
+                        
+                        // Calculate tax amount based on subtotal
+                        Double subtotal = invoice.calculateSubtotal();
+                        if (subtotal != null && tax.getBaseTaxRate() != null) {
+                            BigDecimal taxableAmount = BigDecimal.valueOf(subtotal);
+                            // Use client-specific tax rate if client is available and has customerType, otherwise use base rate
+                            BigDecimal appliedRate = (client != null && client.getCustomerType() != null) ? 
+                                tax.getApplicableRate(client.getCustomerType()) : 
+                                tax.getBaseTaxRate();
+                            BigDecimal taxAmount = taxableAmount
+                                    .multiply(appliedRate)
+                                    .divide(BigDecimal.valueOf(100), 2, BigDecimal.ROUND_HALF_UP);
+                            
+                            invoiceTax.setTaxableAmount(taxableAmount);
+                            invoiceTax.setAppliedRate(appliedRate);
+                            invoiceTax.setTaxAmount(taxAmount);
+                        } else {
+                            // Set default values if calculation not possible
+                            invoiceTax.setTaxableAmount(BigDecimal.ZERO);
+                            invoiceTax.setAppliedRate(BigDecimal.ZERO);
+                            invoiceTax.setTaxAmount(BigDecimal.ZERO);
+                        }
+                        
+                        invoice.addInvoiceTax(invoiceTax);
+                    }
+                }
+        }
+        
         InvoiceSender sender = new InvoiceSender();
         sender.setEmail(request.getEmail());
         sender.setFullName(request.getFullName());
@@ -94,7 +180,28 @@ public class InvoiceServiceImplementation implements InvoiceService {
             invoice.setInvoiceNumber(request.getInvoiceNumber());
             log.info("Using manual invoice number: {} for user: {}", request.getInvoiceNumber(), currentUser.getEmail());
         }
-        invoice.setClientId(client.getId());
+        
+        // Create invoice recipient (Bill To) - populate from client data if available
+        InvoiceRecipient recipient = new InvoiceRecipient();
+        if (client != null) {
+            // Populate recipient from client data
+            recipient.setFullName(client.getFullName());
+            recipient.setBusinessName(client.getBusinessName());
+            recipient.setEmail(client.getEmail());
+            recipient.setPhone(client.getPhone());
+            // Skip address field since it's not essential for invoice creation
+            // Handle null CustomerType safely
+            if (client.getCustomerType() != null) {
+                recipient.setCustomerType(client.getCustomerType().name()); // Convert enum to string
+            } else {
+                recipient.setCustomerType("INDIVIDUAL"); // Default value if null
+            }
+            recipient.setTitle(client.getTitle());
+            recipient.setCountry(client.getCountry());
+        }
+        // Note: clientId is NOT stored in the invoice - only the client data is transferred
+        
+        invoice.setRecipient(recipient);
         Invoice savedInvoice = invoiceRepository.save(invoice);
         sender.setInvoice(savedInvoice);
         invoiceSenderRepository.save(sender);
@@ -106,8 +213,12 @@ public class InvoiceServiceImplementation implements InvoiceService {
         InvoiceResponse response = new InvoiceResponse(savedInvoice);
         
         try {
-            // Safe mapping for client
-            if (client != null) {
+            // Safe mapping for recipient (billTo) - use InvoiceRecipient if available, fallback to Client
+            if (savedInvoice.getRecipient() != null) {
+                ClientResponse billTo = new ClientResponse(savedInvoice.getRecipient());
+                response.setBillTo(billTo);
+            } else if (client != null) {
+                // Fallback to client data (for backward compatibility during transition)
                 ClientResponse billTo = new ClientResponse(client);
                 response.setBillTo(billTo);
             }
@@ -131,8 +242,6 @@ public class InvoiceServiceImplementation implements InvoiceService {
                                 safeResponse.setId(item.getId());
                                 safeResponse.setItemName(item.getItemName() != null ? item.getItemName() : "");
                                 safeResponse.setAmount(item.getAmount() != null ? item.getAmount() : BigDecimal.ZERO);
-                                safeResponse.setTotalTaxAmount(BigDecimal.ZERO);
-                                safeResponse.setAmountWithTax(item.getAmount() != null ? item.getAmount() : BigDecimal.ZERO);
                                 return safeResponse;
                             }
                         })
@@ -213,11 +322,11 @@ public class InvoiceServiceImplementation implements InvoiceService {
         if (!invoice.getUser().getId().equals(currentUser.getId())) {
             throw new RuntimeException("Access denied: Invoice does not belong to current user");
         }
-        Client client = clientRepository.findById(invoice.getClientId())
-                .orElseThrow(()->new ResourceNotFoundException("client not found"));
+        // Since clientId was removed from Invoice model, we pass null for client
+        // The mapToResponse method will use InvoiceRecipient data instead
         InvoiceSender sender = invoiceSenderRepository.findByInvoice(invoice.getId())
                 .orElseThrow(()->new ResourceNotFoundException("Sender not found"));
-        return mapToResponse(invoice,client,sender);
+        return mapToResponse(invoice, null, sender);
     }
 
     @Override
@@ -228,11 +337,11 @@ public class InvoiceServiceImplementation implements InvoiceService {
         List<Invoice> invoices = invoiceRepository.findAllByUserId(currentUser.getId());
         return invoices.stream()
                 .map(invoice -> {
-                    Client client = clientRepository.findById(invoice.getClientId())
-                            .orElseThrow(()->new ResourceNotFoundException("client not found"));
+                    // Since clientId was removed from Invoice model, we pass null for client
+                    // The mapToResponse method will use InvoiceRecipient data instead
                     InvoiceSender sender = invoiceSenderRepository.findByInvoice(invoice.getId())
                             .orElseThrow(()->new ResourceNotFoundException("Sender not found"));
-                    return mapToResponse(invoice,client,sender);
+                    return mapToResponse(invoice, null, sender);
                 })
                 .collect(Collectors.toList());
     }
@@ -254,7 +363,50 @@ public class InvoiceServiceImplementation implements InvoiceService {
         String oldLogoUrl = existingInvoice.getLogoUrl();
         String oldSignatureUrl = existingInvoice.getSignatureUrl();
         String oldInvoiceNumber = existingInvoice.getInvoiceNumber();
-        modelMapper.map(request, existingInvoice);
+        
+        // Update basic fields manually to avoid detached entity issues
+        existingInvoice.setTitle(request.getTitle());
+        existingInvoice.setInvoiceColor(request.getInvoiceColor());
+        existingInvoice.setCreationDate(request.getInvoiceDate() != null ? request.getInvoiceDate().atStartOfDay() : null);
+        existingInvoice.setDueDate(request.getDueDate() != null ? request.getDueDate().atStartOfDay() : null);
+        existingInvoice.setPaymentTerms(request.getPaymentTerms());
+        existingInvoice.setAccountNumber(request.getAccountNumber());
+        existingInvoice.setAccountName(request.getAccountName());
+        existingInvoice.setBank(request.getBank());
+        existingInvoice.setCurrency(request.getCurrency());
+        existingInvoice.setSubtotal(request.getSubtotal());
+        existingInvoice.setTotalDue(request.getTotalDue());
+        existingInvoice.setNote(request.getNote());
+        existingInvoice.setTermsAndConditions(request.getTermsAndConditions());
+        
+        // Handle invoice items update manually to avoid detached entity issues
+        if (request.getItems() != null) {
+            // Clear existing items
+            existingInvoice.getItems().clear();
+            
+            // Add new items
+            for (InvoiceItemRequest itemRequest : request.getItems()) {
+                InvoiceItem item = new InvoiceItem();
+                item.setItemName(itemRequest.getItemName());
+                item.setDescription(itemRequest.getDescription());
+                item.setQuantity(itemRequest.getQuantity());
+                item.setRate(itemRequest.getRate());
+                item.setAmount(itemRequest.getAmount());
+                
+                // Set category if provided
+                if (itemRequest.getCategory() != null) {
+                    try {
+                        item.setCategory(Item_Category.valueOf(itemRequest.getCategory().toUpperCase()));
+                    } catch (IllegalArgumentException e) {
+                        log.warn("Invalid category '{}' for item '{}', skipping category", 
+                                itemRequest.getCategory(), itemRequest.getItemName());
+                    }
+                }
+                
+                // Add item to invoice using helper method to maintain bidirectional relationship
+                existingInvoice.addItem(item);
+            }
+        }
         try {
             if (request.getLogo() != null && !request.getLogo().isEmpty()) {
                 String newLogoUrl = cloudinaryService.uploadFile(request.getLogo());
@@ -298,10 +450,15 @@ public class InvoiceServiceImplementation implements InvoiceService {
             cloudinaryService.deleteFile(oldSignatureUrl);
         }
 
-        return modelMapper.map(updatedInvoice, InvoiceResponse.class);
+        // Get sender for response mapping (client data is in InvoiceRecipient now)
+        InvoiceSender sender = invoiceSenderRepository.findByInvoice(updatedInvoice.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Sender not found"));
+        
+        return mapToResponse(updatedInvoice, null, sender);
     }
 
     @Override
+    @Transactional
     public void deleteInvoice(UUID id) {
         User currentUser = getCurrentUser();
         log.info("Deleting invoice with ID: {} for user: {}", id, currentUser.getEmail());
@@ -314,13 +471,47 @@ public class InvoiceServiceImplementation implements InvoiceService {
             throw new RuntimeException("Access denied: Invoice does not belong to current user");
         }
 
-        if (invoice.getLogoUrl() != null) {
-            cloudinaryService.deleteFile(invoice.getLogoUrl());
-        }
-        if (invoice.getSignatureUrl() != null) {
-            cloudinaryService.deleteFile(invoice.getSignatureUrl());
+        // Delete related entities first to avoid foreign key constraint violations
+        
+        // 1. Delete invoice sender
+        invoiceSenderRepository.findByInvoice(id).ifPresent(sender -> {
+            log.info("Deleting invoice sender for invoice: {}", id);
+            invoiceSenderRepository.delete(sender);
+        });
+        
+        // 2. Delete invoice taxes
+        List<InvoiceTax> invoiceTaxes = invoiceTaxRepository.findByInvoiceId(id);
+        if (!invoiceTaxes.isEmpty()) {
+            log.info("Deleting {} invoice taxes for invoice: {}", invoiceTaxes.size(), id);
+            invoiceTaxRepository.deleteAll(invoiceTaxes);
         }
         
+        // 3. Delete invoice items (should be handled by cascade, but let's be explicit)
+        if (invoice.getItems() != null && !invoice.getItems().isEmpty()) {
+            log.info("Clearing {} invoice items for invoice: {}", invoice.getItems().size(), id);
+            invoice.getItems().clear();
+        }
+
+        // 4. Delete uploaded files from Cloudinary
+        if (invoice.getLogoUrl() != null) {
+            try {
+                cloudinaryService.deleteFile(invoice.getLogoUrl());
+                log.info("Deleted logo file for invoice: {}", id);
+            } catch (Exception e) {
+                log.warn("Failed to delete logo file for invoice {}: {}", id, e.getMessage());
+            }
+        }
+        
+        if (invoice.getSignatureUrl() != null) {
+            try {
+                cloudinaryService.deleteFile(invoice.getSignatureUrl());
+                log.info("Deleted signature file for invoice: {}", id);
+            } catch (Exception e) {
+                log.warn("Failed to delete signature file for invoice {}: {}", id, e.getMessage());
+            }
+        }
+        
+        // 5. Finally delete the invoice itself
         invoiceRepository.deleteById(id);
         log.info("Invoice deleted successfully with ID: {} for user: {}", id, currentUser.getEmail());
     }
@@ -331,11 +522,11 @@ public class InvoiceServiceImplementation implements InvoiceService {
         if(invoices.isEmpty())return List.of();
         return invoices.stream()
                 .map(invoice -> {
-                    Client client = clientRepository.findById(invoice.getClientId())
-                            .orElseThrow(()->new ResourceNotFoundException("client not found"));
+                    // Since clientId was removed from Invoice model, we pass null for client
+                    // The mapToResponse method will use InvoiceRecipient data instead
                     InvoiceSender sender = invoiceSenderRepository.findByInvoice(invoice.getId())
                             .orElseThrow(()->new ResourceNotFoundException("Sender not found"));
-                    return mapToResponse(invoice,client,sender);
+                    return mapToResponse(invoice, null, sender);
                 })
                 .collect(Collectors.toList());
     }

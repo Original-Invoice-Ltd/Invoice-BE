@@ -2,10 +2,8 @@ package invoice.services.implementation;
 
 import invoice.data.constants.Item_Category;
 import invoice.data.models.Product;
-import invoice.data.models.Tax;
 import invoice.data.models.User;
 import invoice.data.repositories.ProductRepository;
-import invoice.data.repositories.TaxRepository;
 import invoice.dtos.request.ProductRequest;
 import invoice.dtos.response.ProductResponse;
 import invoice.exception.ResourceNotFoundException;
@@ -13,9 +11,10 @@ import invoice.services.ProductService;
 import invoice.services.UserService;
 import lombok.AllArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -26,10 +25,9 @@ public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
     private final ModelMapper modelMapper;
     private final UserService userService;
-    private final TaxRepository taxRepository;
 
     @Override
-    public String addProduct(String email, ProductRequest productRequest) {
+    public ProductResponse addProduct(String email, ProductRequest productRequest) {
         User user = userService.getUserByEmail(email);
         Product product = modelMapper.map(productRequest, Product.class);
         
@@ -38,19 +36,13 @@ public class ProductServiceImpl implements ProductService {
             product.setCategory(Item_Category.valueOf(productRequest.getCategory().toUpperCase()));
         }
         
-        // Set taxes if provided
-        if (productRequest.getTaxIds() != null && !productRequest.getTaxIds().isEmpty()) {
-            List<Tax> taxes = taxRepository.findAllById(productRequest.getTaxIds());
-            product.setTaxes(taxes);
-        }
-        
         product.setUser(user);
-        productRepository.save(product);
-        return "product added successfully";
+        Product savedProduct = productRepository.save(product);
+        return new ProductResponse(savedProduct);
     }
 
     @Override
-    public String updateProduct(UUID id, ProductRequest productRequest) {
+    public ProductResponse updateProduct(UUID id, ProductRequest productRequest) {
         Product product = findProduct(id);
         User user = product.getUser();
         
@@ -62,19 +54,9 @@ public class ProductServiceImpl implements ProductService {
             product.setCategory(Item_Category.valueOf(productRequest.getCategory().toUpperCase()));
         }
         
-        // Update taxes if provided
-        if (productRequest.getTaxIds() != null) {
-            if (productRequest.getTaxIds().isEmpty()) {
-                product.setTaxes(new ArrayList<>());
-            } else {
-                List<Tax> taxes = taxRepository.findAllById(productRequest.getTaxIds());
-                product.setTaxes(taxes);
-            }
-        }
-        
         product.setUser(user);
-        productRepository.save(product);
-        return "product updated successfully";
+        Product savedProduct = productRepository.save(product);
+        return new ProductResponse(savedProduct);
     }
 
     @Override
@@ -124,10 +106,48 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional
     public String deleteProduct(UUID id) {
         Product product = findProduct(id);
-        productRepository.delete(product);
-        return "product deleted successfully";
+        
+        try {
+            // Check for any references before deletion
+            // The error suggests there's a foreign key from _taxes to _user_products
+            // This might be a schema inconsistency that needs to be resolved
+            
+            productRepository.delete(product);
+            return "product deleted successfully";
+        } catch (DataIntegrityViolationException e) {
+            // Handle foreign key constraint violations
+            String errorMessage = e.getMessage();
+            if (errorMessage.contains("_taxes") && errorMessage.contains("_user_products")) {
+                // This specific error suggests a schema issue where taxes table 
+                // has a foreign key to products table that shouldn't exist
+                throw new RuntimeException("Cannot delete product: Database schema issue detected. " +
+                    "The taxes table appears to have an unexpected reference to this product. " +
+                    "Please check the database schema and remove any invalid foreign key constraints between _taxes and _user_products tables.");
+            } else if (errorMessage.contains("foreign key constraint")) {
+                throw new RuntimeException("Cannot delete product: It is referenced by other records. " +
+                    "Please remove all references to this product before deleting it.");
+            }
+            throw new RuntimeException("Failed to delete product: " + e.getMessage());
+        } catch (Exception e) {
+            throw new RuntimeException("Unexpected error while deleting product: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Helper method to check if a product can be safely deleted
+     * This method can be expanded to check various relationships
+     */
+    public boolean canDeleteProduct(UUID productId) {
+        try {
+            // Add checks here for any known relationships
+            // For now, we'll rely on the database constraints to catch issues
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private Product findProduct(UUID id) {
