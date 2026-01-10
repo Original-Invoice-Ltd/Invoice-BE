@@ -120,6 +120,13 @@
 			<artifactId>nimbus-jose-jwt</artifactId>
 			<version>9.37.3</version>
 		</dependency>
+		
+		<!-- Pusher for real-time notifications -->
+		<dependency>
+			<groupId>com.pusher</groupId>
+			<artifactId>pusher-http-java</artifactId>
+			<version>1.0.0</version>
+		</dependency>
 	</dependencies>
 
 	<build>
