@@ -1,88 +1,97 @@
 package invoice.controllers;
 
-import invoice.dto.NotificationDTO;
-import invoice.entities.Notification;
+import invoice.dtos.response.NotificationResponse;
 import invoice.services.NotificationService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
+import invoice.data.models.User;
+import invoice.data.repositories.UserRepository;
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/notifications")
-@RequiredArgsConstructor
-@CrossOrigin(origins = {"http://localhost:3000", "https://your-frontend-domain.com"})
+@AllArgsConstructor
+@Slf4j
 public class NotificationController {
     
     private final NotificationService notificationService;
+    private final UserRepository userRepository;
     
-    @GetMapping
-    public ResponseEntity<Page<NotificationDTO>> getNotifications(
-            Authentication authentication,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "4") int size) {
-        
-        String userId = authentication.getName();
-        Page<NotificationDTO> notifications = notificationService.getUserNotifications(userId, page, size);
-        return ResponseEntity.ok(notifications);
-    }
-    
-    @GetMapping("/type/{type}")
-    public ResponseEntity<Page<NotificationDTO>> getNotificationsByType(
-            Authentication authentication,
-            @PathVariable String type,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "4") int size) {
-        
-        String userId = authentication.getName();
+    @GetMapping("/all")
+    public ResponseEntity<List<NotificationResponse>> getAllNotifications() {
         try {
-            Notification.NotificationType notificationType = Notification.NotificationType.valueOf(type.toUpperCase());
-            Page<NotificationDTO> notifications = notificationService.getUserNotificationsByType(userId, notificationType, page, size);
+            User currentUser = getCurrentUser();
+            List<NotificationResponse> notifications = notificationService.getUserNotifications(currentUser.getId());
             return ResponseEntity.ok(notifications);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
+            
+        } catch (Exception e) {
+            log.error("Error fetching notifications: {}", e.getMessage());
+            return ResponseEntity.internalServerError().build();
         }
     }
     
     @GetMapping("/unread")
-    public ResponseEntity<List<NotificationDTO>> getUnreadNotifications(Authentication authentication) {
-        String userId = authentication.getName();
-        List<NotificationDTO> notifications = notificationService.getUnreadNotifications(userId);
-        return ResponseEntity.ok(notifications);
+    public ResponseEntity<List<NotificationResponse>> getUnreadNotifications() {
+        try {
+            User currentUser = getCurrentUser();
+            List<NotificationResponse> notifications = notificationService.getUnreadNotifications(currentUser.getId());
+            return ResponseEntity.ok(notifications);
+            
+        } catch (Exception e) {
+            log.error("Error fetching unread notifications: {}", e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
     }
     
-    @GetMapping("/unread/count")
-    public ResponseEntity<Map<String, Long>> getUnreadCount(Authentication authentication) {
-        String userId = authentication.getName();
-        long count = notificationService.getUnreadCount(userId);
-        return ResponseEntity.ok(Map.of("count", count));
+    @GetMapping("/unread-count")
+    public ResponseEntity<Long> getUnreadCount() {
+        try {
+            User currentUser = getCurrentUser();
+            long count = notificationService.getUnreadCount(currentUser.getId());
+            return ResponseEntity.ok(count);
+            
+        } catch (Exception e) {
+            log.error("Error fetching unread count: {}", e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
     }
     
     @PutMapping("/mark-all-read")
-    public ResponseEntity<Map<String, String>> markAllAsRead(Authentication authentication) {
-        String userId = authentication.getName();
-        notificationService.markAllAsRead(userId);
-        return ResponseEntity.ok(Map.of("message", "All notifications marked as read"));
+    public ResponseEntity<String> markAllAsRead() {
+        try {
+            User currentUser = getCurrentUser();
+            notificationService.markAllAsRead(currentUser.getId());
+            return ResponseEntity.ok("All notifications marked as read");
+            
+        } catch (Exception e) {
+            log.error("Error marking all notifications as read: {}", e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
     }
     
-    @PutMapping("/mark-all-not-new")
-    public ResponseEntity<Map<String, String>> markAllAsNotNew(Authentication authentication) {
-        String userId = authentication.getName();
-        notificationService.markAllAsNotNew(userId);
-        return ResponseEntity.ok(Map.of("message", "All notifications marked as not new"));
+    @PutMapping("/{notificationId}/mark-read")
+    public ResponseEntity<String> markAsRead(@PathVariable UUID notificationId) {
+        try {
+            User currentUser = getCurrentUser();
+            notificationService.markAsRead(notificationId, currentUser.getId());
+            return ResponseEntity.ok("Notification marked as read");
+            
+        } catch (Exception e) {
+            log.error("Error marking notification as read: {}", e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
     }
     
-    @PutMapping("/{id}/read")
-    public ResponseEntity<Map<String, String>> markAsRead(
-            Authentication authentication,
-            @PathVariable Long id) {
-        
-        String userId = authentication.getName();
-        notificationService.markAsRead(id, userId);
-        return ResponseEntity.ok(Map.of("message", "Notification marked as read"));
+    private User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found: " + email));
     }
 }

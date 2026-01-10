@@ -17,6 +17,8 @@ import invoice.dtos.response.InvoiceResponse;
 import invoice.dtos.response.InvoiceSenderResponse;
 import invoice.exception.ResourceNotFoundException;
 import invoice.data.constants.Item_Category;
+import invoice.data.constants.NotificationType;
+import invoice.services.NotificationService;
 import org.modelmapper.ModelMapper;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -28,7 +30,6 @@ import invoice.dtos.request.CreateInvoiceRequest;
 import invoice.dtos.response.CreateInvoiceResponse;
 import invoice.services.InvoiceService;
 import invoice.services.EmailService;
-import invoice.services.NotificationEventPublisher;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -46,7 +47,7 @@ public class InvoiceServiceImplementation implements InvoiceService {
     private final InvoiceTaxRepository invoiceTaxRepository;
     private final InvoiceSenderRepository invoiceSenderRepository;
     private final EmailService emailService;
-    private final NotificationEventPublisher notificationEventPublisher;
+    private final NotificationService notificationService;
 
 
     @Override
@@ -231,15 +232,18 @@ public class InvoiceServiceImplementation implements InvoiceService {
             // Don't throw exception - invoice creation should succeed even if email fails
         }
         
-        // Publish invoice sent event for in-app notifications
+        // Create notification for invoice sent
         try {
-            notificationEventPublisher.publishInvoiceSentEvent(
-                    currentUser.getId().toString(),
-                    recipient.getFullName(),
-                    savedInvoice.getId().toString()
+            notificationService.createNotification(
+                currentUser,
+                "Invoice sent",
+                "Your invoice to " + recipient.getFullName() + " was delivered successfully and is now viewable.",
+                NotificationType.INVOICE_CREATED,
+                savedInvoice.getId(),
+                "INVOICE"
             );
         } catch (Exception e) {
-            log.warn("Failed to publish invoice sent event: {}", e.getMessage());
+            log.warn("Failed to create invoice sent notification: {}", e.getMessage());
         }
         
         return mapToResponse(savedInvoice, client, sender);
@@ -480,6 +484,20 @@ public class InvoiceServiceImplementation implements InvoiceService {
         Invoice updatedInvoice = invoiceRepository.save(existingInvoice);
         log.info("Invoice updated successfully with ID: {} for user: {}", updatedInvoice.getId(), currentUser.getEmail());
 
+        // Create notification for invoice update
+        try {
+            notificationService.createNotification(
+                currentUser,
+                "Invoice Updated",
+                "Invoice " + updatedInvoice.getInvoiceNumber() + " has been updated successfully",
+                NotificationType.INVOICE_UPDATED,
+                updatedInvoice.getId(),
+                "INVOICE"
+            );
+        } catch (Exception e) {
+            log.error("Failed to create notification for invoice update: {}", e.getMessage());
+        }
+
         if (request.getLogo() != null && !request.getLogo().isEmpty() && oldLogoUrl != null) {
             cloudinaryService.deleteFile(oldLogoUrl);
         }
@@ -507,6 +525,9 @@ public class InvoiceServiceImplementation implements InvoiceService {
         if (!invoice.getUser().getId().equals(currentUser.getId())) {
             throw new RuntimeException("Access denied: Invoice does not belong to current user");
         }
+
+        // Store invoice number for notification before deletion
+        String invoiceNumber = invoice.getInvoiceNumber();
 
         // Delete related entities first to avoid foreign key constraint violations
         
@@ -551,6 +572,20 @@ public class InvoiceServiceImplementation implements InvoiceService {
         // 5. Finally delete the invoice itself
         invoiceRepository.deleteById(id);
         log.info("Invoice deleted successfully with ID: {} for user: {}", id, currentUser.getEmail());
+        
+        // Create notification for invoice deletion
+        try {
+            notificationService.createNotification(
+                currentUser,
+                "Invoice Deleted",
+                "Invoice " + invoiceNumber + " has been deleted successfully",
+                NotificationType.INVOICE_DELETED,
+                id,
+                "INVOICE"
+            );
+        } catch (Exception e) {
+            log.error("Failed to create notification for invoice deletion: {}", e.getMessage());
+        }
     }
 
     @Override
