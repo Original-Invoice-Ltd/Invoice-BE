@@ -2,8 +2,7 @@ spring:
   application:
     name: Invoice-BE
   profiles:
-<<<<<<< HEAD
-    active: prod
+    active: dev
 
 # Pusher Configuration
 pusher:
@@ -13,8 +12,5 @@ pusher:
   cluster: ${PUSHER_CLUSTER:us2}
   encrypted: true
 
-=======
-    active: pro
->>>>>>> 1764b6170db2baae62789ee7bede78863eef5203
 server:
   port: 8089
