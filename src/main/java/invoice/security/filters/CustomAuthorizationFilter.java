@@ -49,6 +49,14 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
         log.info("Starting authorization");
+        
+        // Skip OPTIONS requests (CORS preflight) - they don't carry cookies
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            log.info("Skipping authorization for OPTIONS preflight request");
+            filterChain.doFilter(request, response);
+            return;
+        }
+        
         String requestPath = request.getRequestURI();
         boolean isRequestPathPublic = isPublicEndpoint(requestPath);
         if (isRequestPathPublic) {

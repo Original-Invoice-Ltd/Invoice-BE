@@ -29,6 +29,8 @@ import invoice.config.CloudinaryService;
 import invoice.dtos.request.CreateInvoiceRequest;
 import invoice.dtos.response.CreateInvoiceResponse;
 import invoice.services.InvoiceService;
+import invoice.services.EmailService;
+import invoice.services.NotificationEventPublisher;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -44,8 +46,9 @@ public class InvoiceServiceImplementation implements InvoiceService {
     private final ClientRepository clientRepository;
     private final TaxRepository taxRepository;
     private final InvoiceTaxRepository invoiceTaxRepository;
-    private InvoiceSenderRepository invoiceSenderRepository;
-    private final NotificationService notificationService;
+    private final InvoiceSenderRepository invoiceSenderRepository;
+    private final EmailService emailService;
+    private final NotificationEventPublisher notificationEventPublisher;
 
 
     @Override
@@ -209,22 +212,41 @@ public class InvoiceServiceImplementation implements InvoiceService {
         sender.setInvoice(savedInvoice);
         invoiceSenderRepository.save(sender);
         
-        // Create notification for invoice creation
+        // Send invoice notification email to recipient
         try {
-            notificationService.createNotification(
-                currentUser,
-                "Invoice Created",
-                "Invoice " + savedInvoice.getInvoiceNumber() + " has been created successfully",
-                NotificationType.INVOICE_CREATED,
-                savedInvoice.getId(),
-                "INVOICE"
+            if (recipient.getEmail() != null) {
+                emailService.sendInvoiceNotificationEmail(
+                        recipient.getEmail(),
+                        currentUser.getFullName(),
+                        savedInvoice.getId().toString(),
+                        "", // frontendUrl not available in create request, can be added if needed
+                        savedInvoice.getInvoiceNumber(),
+                        savedInvoice.getCreationDate() != null ? savedInvoice.getCreationDate().toString() : "N/A",
+                        savedInvoice.getDueDate() != null ? savedInvoice.getDueDate().toString() : "N/A",
+                        savedInvoice.getTotalDue() != null ? savedInvoice.getTotalDue().toString() : "0.00",
+                        recipient.getFullName()
+                );
+                log.info("Invoice notification email sent to {} for invoice {}", recipient.getEmail(), savedInvoice.getInvoiceNumber());
+            }
+        } catch (Exception e) {
+            log.warn("Failed to send invoice notification email: {}", e.getMessage());
+            // Don't throw exception - invoice creation should succeed even if email fails
+        }
+        
+        // Publish invoice sent event for in-app notifications
+        try {
+            notificationEventPublisher.publishInvoiceSentEvent(
+                    currentUser.getId().toString(),
+                    recipient.getFullName(),
+                    savedInvoice.getId().toString()
             );
         } catch (Exception e) {
-            log.error("Failed to create notification for invoice creation: {}", e.getMessage());
+            log.warn("Failed to publish invoice sent event: {}", e.getMessage());
         }
         
         return mapToResponse(savedInvoice, client, sender);
     }
+
 
     private InvoiceResponse mapToResponse(Invoice savedInvoice, Client client, InvoiceSender sender) {
         InvoiceResponse response = new InvoiceResponse(savedInvoice);
@@ -265,6 +287,7 @@ public class InvoiceServiceImplementation implements InvoiceService {
                         .collect(Collectors.toList());
                 response.setItems(itemResponses);
             }
+            
             
             // Safe mapping for totals
             response.setSubtotal(savedInvoice.getSubtotal() != null ? savedInvoice.getSubtotal() : 0.0);
