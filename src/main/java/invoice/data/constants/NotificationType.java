@@ -1,0 +1,13 @@
+package invoice.data.constants;
+
+public enum NotificationType {
+    INVOICE_CREATED,
+    INVOICE_UPDATED,
+    INVOICE_DELETED,
+    CLIENT_CREATED,
+    CLIENT_UPDATED,
+    CLIENT_DELETED,
+    INVOICE_RECEIVED,
+    PAYMENT_RECEIVED,
+    SYSTEM_NOTIFICATION
+}
