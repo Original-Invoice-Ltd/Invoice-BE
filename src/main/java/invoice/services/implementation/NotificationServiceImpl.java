@@ -24,7 +24,8 @@ import java.util.stream.Collectors;
 public class NotificationServiceImpl implements NotificationService {
     
     private final NotificationRepository notificationRepository;
-    private final Pusher pusher;
+    // Temporarily comment out Pusher to test compilation
+    // private final Pusher pusher;
     
     @Override
     @Transactional
@@ -87,6 +88,10 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public void sendRealTimeNotification(User user, String title, String message, NotificationType type) {
         try {
+            // Temporarily disable Pusher for testing
+            log.info("Would send real-time notification to user {}: {} (Pusher disabled for testing)", user.getEmail(), title);
+            
+            /* TODO: Re-enable when Pusher is properly configured
             Map<String, Object> data = new HashMap<>();
             data.put("title", title);
             data.put("message", message);
@@ -98,6 +103,7 @@ public class NotificationServiceImpl implements NotificationService {
             pusher.trigger(channel, "notification", data);
             
             log.info("Sent real-time notification to user {}: {}", user.getEmail(), title);
+            */
             
         } catch (Exception e) {
             log.error("Error sending real-time notification to user {}: {}", user.getEmail(), e.getMessage());

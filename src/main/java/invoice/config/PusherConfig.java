@@ -1,5 +1,7 @@
 package invoice.config;
 
+// Temporarily commented out for testing
+/*
 import com.pusher.rest.Pusher;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -31,3 +33,4 @@ public class PusherConfig {
         return pusher;
     }
 }
+*/
