@@ -101,6 +101,7 @@ public class InvoiceServiceImplementation implements InvoiceService {
         return mapToResponse(savedInvoice, client, sender);
     }
 
+
     private InvoiceResponse mapToResponse(Invoice savedInvoice, Client client, InvoiceSender sender) {
         InvoiceResponse response = new InvoiceResponse(savedInvoice);
         
@@ -138,6 +139,7 @@ public class InvoiceServiceImplementation implements InvoiceService {
                         .collect(Collectors.toList());
                 response.setItems(itemResponses);
             }
+            
             
             // Safe mapping for totals
             response.setSubtotal(savedInvoice.getSubtotal() != null ? savedInvoice.getSubtotal() : 0.0);
