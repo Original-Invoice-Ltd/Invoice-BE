@@ -309,5 +309,46 @@ public class UserServiceImpl implements UserService {
         return "Phone number updated successfully";
     }
 
+    @Override
+    public String updateProfile(String email, String fullName, String phoneNumber) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException("User not found"));
+        
+        if (fullName != null && !fullName.trim().isEmpty()) {
+            user.setFullName(fullName.trim());
+        }
+        
+        if (phoneNumber != null && !phoneNumber.trim().isEmpty()) {
+            user.setPhoneNumber(phoneNumber.trim());
+        }
+        
+        userRepository.save(user);
+        
+        return "Profile updated successfully";
+    }
+
+    @Override
+    public String changePassword(String email, String currentPassword, String newPassword) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException("User not found"));
+        
+        // Check if user has OAuth provider (Google/Apple users don't have passwords)
+        if (user.getOauthProvider() != null) {
+            throw new BusinessException("Cannot change password for OAuth users. Please use your " + 
+                                      user.getOauthProvider() + " account to manage your password.");
+        }
+        
+        // Verify current password
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new BusinessException("Current password is incorrect");
+        }
+        
+        // Update password
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        
+        return "Password changed successfully";
+    }
+
 
 }

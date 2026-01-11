@@ -1,5 +1,6 @@
 package invoice.controllers;
 
+import com.cloudinary.Cloudinary;
 import invoice.config.AppProperties;
 import invoice.data.constants.Role;
 import invoice.data.constants.UserStatus;
@@ -46,6 +47,7 @@ public class OAuthController {
     private final AppProperties appProperties;
     private final RsaKeyProperties rsaKeys;
     private final HttpServletResponse response;
+    private final Cloudinary cloudinary;
     
     // Google OAuth endpoints
     @GetMapping("/google/login")
@@ -98,7 +100,7 @@ public class OAuthController {
                 phoneNumber = null; // Don't update phone for existing users during sign-in
             }
             
-            // Create or find user with phone number
+            // Create or find user with phone number and profile image
             User user = createOrUpdateUser(
                 userInfo.getEmail(),
                 userInfo.getName(),
@@ -107,7 +109,8 @@ public class OAuthController {
                 "GOOGLE",
                 userInfo.getId(),
                 tokenResponse.getRefreshToken(),
-                phoneNumber
+                phoneNumber,
+                userInfo.getPicture()
             );
             
             // Generate JWT tokens
@@ -224,7 +227,8 @@ public class OAuthController {
                 "APPLE",
                 userInfo.getSub(),
                 null, // Apple doesn't provide refresh tokens in this flow
-                phoneNumber
+                phoneNumber,
+                null // Apple doesn't provide profile picture in the same way as Google
             );
             
             // Generate JWT tokens
@@ -249,7 +253,7 @@ public class OAuthController {
         }
     }
     
-    private User createOrUpdateUser(String email, String fullName, String givenName, String familyName, String provider, String providerId, String refreshToken, String phoneNumber) {
+    private User createOrUpdateUser(String email, String fullName, String givenName, String familyName, String provider, String providerId, String refreshToken, String phoneNumber, String profileImageUrl) {
         return userRepository.findByEmail(email)
                 .map(existingUser -> {
                     // Update existing user
@@ -265,6 +269,19 @@ public class OAuthController {
                     if ((existingUser.getPhoneNumber() == null || existingUser.getPhoneNumber().isEmpty()) && phoneNumber != null) {
                         existingUser.setPhoneNumber(phoneNumber);
                         needsUpdate = true;
+                    }
+                    
+                    // Update profile image if missing and URL provided
+                    if ((existingUser.getMediaUrl() == null || existingUser.getMediaUrl().isEmpty()) && profileImageUrl != null) {
+                        try {
+                            String cloudinaryUrl = invoice.utiils.ServiceUtils.uploadImageFromUrl(profileImageUrl, cloudinary.uploader());
+                            if (cloudinaryUrl != null) {
+                                existingUser.setMediaUrl(cloudinaryUrl);
+                                needsUpdate = true;
+                            }
+                        } catch (Exception e) {
+                            log.warn("Failed to upload profile image from OAuth provider: {}", e.getMessage());
+                        }
                     }
                     
                     // Update OAuth provider info if missing
@@ -287,7 +304,7 @@ public class OAuthController {
                 })
                 .orElseGet(() -> {
                     // Create new user
-                    User newUser = User.builder()
+                    User.UserBuilder userBuilder = User.builder()
                             .id(UUID.randomUUID())
                             .email(email)
                             .fullName(fullName != null ? fullName : (givenName != null && familyName != null ? givenName + " " + familyName : email))
@@ -298,9 +315,21 @@ public class OAuthController {
                             .status(UserStatus.VERIFIED) // Set status to VERIFIED for OAuth users
                             .oauthProvider(provider)
                             .oauthProviderId(providerId)
-                            .currentToken(null) // Will be set later with JWT access token
-                            .build();
+                            .currentToken(null); // Will be set later with JWT access token
                     
+                    // Upload profile image if provided
+                    if (profileImageUrl != null) {
+                        try {
+                            String cloudinaryUrl = invoice.utiils.ServiceUtils.uploadImageFromUrl(profileImageUrl, cloudinary.uploader());
+                            if (cloudinaryUrl != null) {
+                                userBuilder.mediaUrl(cloudinaryUrl);
+                            }
+                        } catch (Exception e) {
+                            log.warn("Failed to upload profile image from OAuth provider: {}", e.getMessage());
+                        }
+                    }
+                    
+                    User newUser = userBuilder.build();
                     return userRepository.save(newUser);
                 });
     }

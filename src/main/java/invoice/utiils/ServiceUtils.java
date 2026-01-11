@@ -6,6 +6,9 @@ import invoice.exception.UploadMediaFailedException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.net.URL;
 import java.util.Map;
 
 @Slf4j
@@ -24,6 +27,32 @@ public class ServiceUtils {
         } catch (Exception exception) {
             log.error("Error while uploading image to Cloudinary", exception);
             throw new UploadMediaFailedException("a: "+exception.getMessage());
+        }
+    }
+
+    public static String uploadImageFromUrl(String imageUrl, Uploader uploader) {
+        log.info("Trying to upload image from URL to Cloudinary: {}", imageUrl);
+        try {
+            // Download image from URL
+            URL url = new URL(imageUrl);
+            byte[] imageBytes = url.openStream().readAllBytes();
+            
+            Map<?, ?> map = ObjectUtils.asMap(
+                    "resource_type", "image",
+                    "use_filename", false,
+                    "unique_filename", true
+            );
+            
+            Map<?, ?> uploadResponse = uploader.upload(imageBytes, map);
+            log.info("Image uploaded successfully from URL");
+            return uploadResponse.get("url").toString();
+        } catch (IOException exception) {
+            log.error("Error while downloading/uploading image from URL to Cloudinary", exception);
+            // Return null instead of throwing exception to not break OAuth flow
+            return null;
+        } catch (Exception exception) {
+            log.error("Unexpected error while uploading image from URL to Cloudinary", exception);
+            return null;
         }
     }
 }
