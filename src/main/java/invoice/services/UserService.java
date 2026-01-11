@@ -50,4 +50,6 @@ public interface UserService {
     SignUpResponse register(SignUpRequest signUpRequest);
     
     String updatePhoneNumber(String email, String phoneNumber);
+    String updateProfile(String email, String fullName, String phoneNumber);
+    String changePassword(String email, String currentPassword, String newPassword);
 }
