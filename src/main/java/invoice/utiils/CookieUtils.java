@@ -64,4 +64,12 @@ public class CookieUtils {
         cookie.setMaxAge(0);
         return cookie;
     }
+    
+    public static Cookie clearAccessTokenCookie() {
+        return deleteAccessTokenCookie();
+    }
+    
+    public static Cookie clearRefreshTokenCookie() {
+        return deleteRefreshTokenCookie();
+    }
 }

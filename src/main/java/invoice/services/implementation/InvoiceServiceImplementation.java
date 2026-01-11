@@ -99,6 +99,9 @@ public class InvoiceServiceImplementation implements InvoiceService {
         invoice.setNote(request.getNote());
         invoice.setTermsAndConditions(request.getTermsAndConditions());
         
+        // Set default status to UNPAID for new invoices
+        invoice.setStatus(Invoice_Status.UNPAID);
+        
         // Handle invoice items manually to avoid detached entity issues
         if (request.getItems() != null && !request.getItems().isEmpty()) {
             for (InvoiceItemRequest itemRequest : request.getItems()) {
