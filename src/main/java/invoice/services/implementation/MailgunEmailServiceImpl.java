@@ -94,7 +94,7 @@ public class MailgunEmailServiceImpl implements EmailService {
     @Override
     public void sendInvoiceNotificationEmail(String toEmail, String firstName, String invoiceId, String frontendUrl, String invoiceNumber, String invoiceDate, String dueDate, String amount, String clientName) {
         String subject = "Invoice #" + invoiceNumber + " sent to " + clientName;
-        String viewInvoiceUrl = frontendUrl + "/invoices/" + invoiceId;
+        String viewInvoiceUrl = "https://originalinvoice.com/customer/invoice/" + invoiceId;
         String htmlContent = buildInvoiceNotificationEmailBody(firstName, viewInvoiceUrl, invoiceNumber, invoiceDate, dueDate, amount, clientName);
 
         try {
@@ -109,7 +109,7 @@ public class MailgunEmailServiceImpl implements EmailService {
     @Override
     public void sendInvoiceNotificationEmail(String toEmail, String firstName, String invoiceId, String frontendUrl) {
         String subject = "Your New Invoice is Ready";
-        String viewInvoiceUrl = frontendUrl + "/invoices/" + invoiceId;
+        String viewInvoiceUrl = "https://originalinvoice.com/customer/invoice/" + invoiceId;
         String htmlContent = buildInvoiceNotificationEmailBody(firstName, viewInvoiceUrl);
 
         try {
@@ -565,13 +565,13 @@ public class MailgunEmailServiceImpl implements EmailService {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>New Invoice - Original Invoice</title>
         </head>
-        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f1f5f9; padding: 40px 20px;">
-            <table cellpadding="0" cellspacing="0" border="0" width="100%%" style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #EFF8FF80; padding: 40px 20px;">
+            <table cellpadding="0" cellspacing="0" border="0" width="100%%" style="max-width: 600px; margin: 0 auto;">
                 <!-- Header with Logo -->
                 <tr>
-                    <td style="background-color: #f1f5f9; padding: 40px 40px 20px 40px; text-align: center;">
+                    <td style="background-color: #EFF8FF80; padding: 40px 40px 20px 40px; text-align: center;">
                         <div style="display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
-                            <svg width="48" height="48" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 12px;">
+                            <svg width="120" height="40" viewBox="0 0 120 40" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <rect width="32" height="32" rx="9" fill="url(#paint0_linear_14310_13934)"/>
                                 <rect x="0.25" y="0.25" width="31.5" height="31.5" rx="8.75" stroke="white" stroke-opacity="0.27" stroke-width="0.5"/>
                                 <path d="M10.7339 8.09381C10.9572 7.70706 11.3699 7.46881 11.8165 7.46881L20.4298 7.46881C20.8764 7.46881 21.2891 7.70706 21.5124 8.09381L25.819 15.5532C26.0423 15.94 26.0423 16.4165 25.819 16.8032L22.5039 22.5452L21.4214 20.6702L24.0148 16.1782L20.069 9.34381L12.1773 9.34381L9.59725 13.8126H7.43219L10.7339 8.09381Z" fill="#EFF8FF"/>
@@ -587,30 +587,32 @@ public class MailgunEmailServiceImpl implements EmailService {
                     </td>
                 </tr>
                 
-                <!-- Main Content -->
+                <!-- Main Content - White Background -->
                 <tr>
-                    <td style="padding: 40px; background-color: white;">
-                        <h2 style="color: #1e293b; margin: 0 0 24px 0; font-size: 32px; font-weight: 700; line-height: 1.2;">New Invoice Available</h2>
+                    <td style="padding: 40px; background-color: white; border-radius: 12px; margin: 20px;">
+                        <h2 style="color: #1e293b; margin: 0 0 24px 0; font-size: 28px; font-weight: 700; line-height: 1.2;">You have received a new invoice</h2>
                         
                         <p style="color: #475569; font-size: 16px; line-height: 1.6; margin: 0 0 8px 0;">Hi <strong>%s</strong>,</p>
                         
-                        <p style="color: #64748b; font-size: 16px; line-height: 1.6; margin: 0 0 16px 0;">
-                            A new invoice has been generated for you.
-                        </p>
-                        
                         <p style="color: #64748b; font-size: 16px; line-height: 1.6; margin: 0 0 32px 0;">
-                            Click the button below to view your invoice details and manage your payment.
+                            A new invoice has been sent to you. Please review the details and proceed with payment if required.
                         </p>
                         
                         <!-- CTA Button -->
                         <div style="text-align: center; margin: 32px 0;">
-                            <a href="%s" style="background: linear-gradient(135deg, #3b82f6 0%%, #1d4ed8 100%%); color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);">
+                            <a href="%s" style="background-color: #2F80ED; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px;">
                                 View Invoice
                             </a>
                         </div>
                         
+                        <div style="text-align: center; margin: 24px 0;">
+                            <p style="color: #64748b; font-size: 12px; margin: 0;">
+                                Powered by <span style="color: #2F80ED; font-weight: 600;">Original Invoice</span>
+                            </p>
+                        </div>
+                        
                         <p style="color: #64748b; font-size: 14px; line-height: 1.5; margin: 32px 0 0 0;">
-                            If you have any questions, contact support.
+                            If you have any questions about this invoice, please contact the sender directly.
                         </p>
                         
                         <div style="margin-top: 40px; padding-top: 24px;">
@@ -624,7 +626,7 @@ public class MailgunEmailServiceImpl implements EmailService {
                 
                 <!-- Footer -->
                 <tr>
-                    <td style="background-color: #ffffff; padding: 32px 40px; text-align: center;">
+                    <td style="background-color: #EFF8FF80; padding: 32px 40px; text-align: center;">
                         <div style="margin-bottom: 16px;">
                             <h3 style="color: #1e293b; margin: 0 0 8px 0; font-size: 16px; font-weight: 600;">Original Invoice</h3>
                             <p style="color: #3b82f6; margin: 0; font-size: 14px;">
@@ -680,27 +682,18 @@ public class MailgunEmailServiceImpl implements EmailService {
             <table cellpadding="0" cellspacing="0" border="0" width="100%%" style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
                 <!-- Header with Logo -->
                 <tr>
-                    <td style="background-color: #f1f5f9; padding: 40px 40px 20px 40px; text-align: center;">
+                    <td style="background-color: #EFF8FF80; padding: 40px 40px 20px 40px; text-align: center;">
                         <div style="display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
-                            <svg width="48" height="48" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 12px;">
-                                <rect width="32" height="32" rx="9" fill="url(#paint0_linear_14310_13934)"/>
-                                <rect x="0.25" y="0.25" width="31.5" height="31.5" rx="8.75" stroke="white" stroke-opacity="0.27" stroke-width="0.5"/>
-                                <path d="M10.7339 8.09381C10.9572 7.70706 11.3699 7.46881 11.8165 7.46881L20.4298 7.46881C20.8764 7.46881 21.2891 7.70706 21.5124 8.09381L25.819 15.5532C26.0423 15.94 26.0423 16.4165 25.819 16.8032L22.5039 22.5452L21.4214 20.6702L24.0148 16.1782L20.069 9.34381L12.1773 9.34381L9.59725 13.8126H7.43219L10.7339 8.09381Z" fill="#EFF8FF"/>
-                                <path d="M20.0875 22.9804L21.0825 24.7037C20.8892 24.822 20.6642 24.8876 20.4298 24.8876H11.8165C11.3699 24.8876 10.9572 24.6494 10.7339 24.2626L6.42723 16.8032C6.31181 16.6033 6.25606 16.3794 6.25996 16.1563L15.6132 16.1562C15.9488 16.1562 16.2589 16.3357 16.4261 16.6268L20.0818 22.9904L20.0875 22.9804Z" fill="#EFF8FF"/>
-                                <defs>
-                                    <linearGradient id="paint0_linear_14310_13934" x1="16" y1="0" x2="16" y2="32" gradientUnits="userSpaceOnUse">
-                                        <stop stop-color="#3B82F6"/>
-                                        <stop offset="1" stop-color="#1D4ED8"/>
-                                    </linearGradient>
-                                </defs>
+                            <svg width="120" height="40" viewBox="0 0 120 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <text x="60" y="25" text-anchor="middle" style="font-family: Arial, sans-serif; font-size: 18px; font-weight: bold; fill: #2F80ED;">Original Invoice</text>
                             </svg>
                         </div>
                     </td>
                 </tr>
                 
-                <!-- Main Content -->
+                <!-- Main Content - White Background -->
                 <tr>
-                    <td style="padding: 40px; background-color: white;">
+                    <td style="padding: 40px; background-color: white; border-radius: 12px; margin: 20px;">
                         <h2 style="color: #1e293b; margin: 0 0 24px 0; font-size: 28px; font-weight: 700; line-height: 1.2;">Invoice #%s sent to %s</h2>
                         
                         <p style="color: #475569; font-size: 16px; line-height: 1.6; margin: 0 0 8px 0;">Hi %s,</p>
@@ -710,34 +703,38 @@ public class MailgunEmailServiceImpl implements EmailService {
                         </p>
                         
                         <!-- Invoice Amount Box -->
-                        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 32px; text-align: center; margin: 32px 0;">
+                        <div style="text-align: center; margin: 32px 0;">
                             <p style="color: #64748b; font-size: 14px; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">INVOICE AMOUNT</p>
-                            <h1 style="color: #1e293b; margin: 0; font-size: 36px; font-weight: 800;">%s</h1>
+                            <h1 style="color: #1e293b; margin: 0 0 24px 0; font-size: 36px; font-weight: 800;">%s</h1>
                         </div>
                         
-                        <!-- Invoice Details -->
-                        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin: 24px 0;">
-                            <table cellpadding="0" cellspacing="0" border="0" width="100%%" style="font-size: 14px;">
-                                <tr>
-                                    <td style="color: #64748b; padding: 8px 0; width: 40%%; font-weight: 500;">Invoice No</td>
-                                    <td style="color: #1e293b; padding: 8px 0; text-align: right; font-weight: 600;">%s</td>
-                                </tr>
-                                <tr>
-                                    <td style="color: #64748b; padding: 8px 0; font-weight: 500;">Invoice Date</td>
-                                    <td style="color: #1e293b; padding: 8px 0; text-align: right; font-weight: 600;">%s</td>
-                                </tr>
-                                <tr>
-                                    <td style="color: #64748b; padding: 8px 0; font-weight: 500;">Due Date</td>
-                                    <td style="color: #1e293b; padding: 8px 0; text-align: right; font-weight: 600;">%s</td>
-                                </tr>
-                            </table>
-                        </div>
+                        <!-- Invoice Details Table -->
+                        <table cellpadding="0" cellspacing="0" border="0" width="100%%" style="font-size: 14px; margin: 24px 0;">
+                            <tr>
+                                <td style="color: #64748b; padding: 12px 0; width: 40%%; font-weight: 500;">Invoice No</td>
+                                <td style="color: #1e293b; padding: 12px 0; text-align: right; font-weight: 600;">%s</td>
+                            </tr>
+                            <tr>
+                                <td style="color: #64748b; padding: 12px 0; font-weight: 500;">Invoice Date</td>
+                                <td style="color: #1e293b; padding: 12px 0; text-align: right; font-weight: 600;">%s</td>
+                            </tr>
+                            <tr>
+                                <td style="color: #64748b; padding: 12px 0; font-weight: 500;">Due Date</td>
+                                <td style="color: #1e293b; padding: 12px 0; text-align: right; font-weight: 600;">%s</td>
+                            </tr>
+                        </table>
                         
                         <!-- CTA Button -->
                         <div style="text-align: center; margin: 32px 0;">
                             <a href="%s" style="background: #3b82f6; color: white; padding: 14px 40px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);">
                                 View Invoice
                             </a>
+                        </div>
+                        
+                        <div style="text-align: center; margin: 24px 0;">
+                            <p style="color: #64748b; font-size: 12px; margin: 0;">
+                                Powered by <span style="color: #2F80ED; font-weight: 600;">Original Invoice</span>
+                            </p>
                         </div>
                         
                         <p style="color: #64748b; font-size: 14px; line-height: 1.5; margin: 32px 0 0 0; text-align: center;">
