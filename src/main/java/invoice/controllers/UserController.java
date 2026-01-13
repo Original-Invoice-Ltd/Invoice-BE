@@ -13,6 +13,7 @@ import invoice.security.config.RsaKeyProperties;
 import invoice.services.UserService;
 import invoice.utiils.CookieUtils;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -243,6 +244,63 @@ public class UserController {
             return new ResponseEntity<>(response, OK);
         }
         catch (OriginalInvoiceBaseException ex){
+            return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
+        }
+    }
+
+    @PutMapping("/update-profile")
+    public ResponseEntity<?> updateProfile(@RequestBody Map<String, String> request, Principal principal) {
+        try {
+            if (principal == null) {
+                return new ResponseEntity<>("User not authenticated", HttpStatus.UNAUTHORIZED);
+            }
+            
+            String fullName = request.get("fullName");
+            String phoneNumber = request.get("phoneNumber");
+            
+            String response = userService.updateProfile(principal.getName(), fullName, phoneNumber);
+            return new ResponseEntity<>(response, OK);
+        } catch (OriginalInvoiceBaseException ex) {
+            return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
+        }
+    }
+
+    @PutMapping("/change-password")
+    public ResponseEntity<?> changePassword(@RequestBody Map<String, String> request, Principal principal) {
+        try {
+            if (principal == null) {
+                return new ResponseEntity<>("User not authenticated", HttpStatus.UNAUTHORIZED);
+            }
+            
+            String currentPassword = request.get("currentPassword");
+            String newPassword = request.get("newPassword");
+            
+            if (currentPassword == null || newPassword == null) {
+                return new ResponseEntity<>("Current password and new password are required", BAD_REQUEST);
+            }
+            
+            String response = userService.changePassword(principal.getName(), currentPassword, newPassword);
+            return new ResponseEntity<>(response, OK);
+        } catch (OriginalInvoiceBaseException ex) {
+            return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
+        }
+    }
+
+    @DeleteMapping("/delete-account")
+    public ResponseEntity<?> deleteAccount(Principal principal, HttpServletResponse httpResponse) {
+        try {
+            if (principal == null) {
+                return new ResponseEntity<>("User not authenticated", HttpStatus.UNAUTHORIZED);
+            }
+            
+            String responseMessage = userService.deleteUserByEmail(principal.getName());
+            
+            // Clear cookies after account deletion
+            httpResponse.addCookie(CookieUtils.clearAccessTokenCookie());
+            httpResponse.addCookie(CookieUtils.clearRefreshTokenCookie());
+            
+            return new ResponseEntity<>(responseMessage, OK);
+        } catch (OriginalInvoiceBaseException ex) {
             return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
         }
     }
