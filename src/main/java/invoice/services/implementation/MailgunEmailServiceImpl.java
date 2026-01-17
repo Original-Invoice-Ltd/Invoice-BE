@@ -837,4 +837,113 @@ public class MailgunEmailServiceImpl implements EmailService {
         </html>
         """.formatted(invoiceNumber, clientName, invoiceNumber, clientName, firstName, invoiceNumber, amount, clientName, amount, invoiceNumber, invoiceDate, dueDate, viewInvoiceUrl);
     }
+
+    @Override
+    public void sendPaymentEvidenceNotificationEmail(String toEmail, String senderName, String invoiceNumber, String customerName, String dashboardUrl) {
+        String subject = "Payment Evidence Uploaded - Invoice #" + invoiceNumber;
+        String htmlContent = buildPaymentEvidenceNotificationEmailBody(senderName, invoiceNumber, customerName, dashboardUrl);
+
+        try {
+            sendEmailInternal(senderName, toEmail, subject, htmlContent);
+            log.info("Payment evidence notification email sent successfully to {}", toEmail);
+        } catch (Exception e) {
+            log.error("Failed to send payment evidence notification email to {}: {}", toEmail, e.getMessage(), e);
+            throw new RuntimeException("Failed to send payment evidence notification email", e);
+        }
+    }
+
+    private String buildPaymentEvidenceNotificationEmailBody(String senderName, String invoiceNumber, String customerName, String dashboardUrl) {
+        return """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Payment Evidence Uploaded - Invoice #%s</title>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: linear-gradient(135deg, #f0fdf4 0%%, #dcfce7 100%%); padding: 40px 20px;">
+            <table cellpadding="0" cellspacing="0" border="0" width="100%%" style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+                <!-- Header with Logo -->
+                <tr>
+                    <td style="background: linear-gradient(135deg, #22c55e 0%%, #16a34a 100%%); padding: 40px 40px 20px 40px; text-align: center;">
+                        <div style="display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+                            <div style="background-color: rgba(255,255,255,0.2); padding: 12px; border-radius: 50%%; margin-right: 12px;">
+                                <span style="font-size: 32px;">📄</span>
+                            </div>
+                            <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">Original Invoice</h1>
+                        </div>
+                    </td>
+                </tr>
+                
+                <!-- Main Content -->
+                <tr>
+                    <td style="padding: 40px; background-color: white;">
+                        <div style="text-align: center; margin-bottom: 30px;">
+                            <div style="display: inline-block; background: linear-gradient(135deg, #dcfce7 0%%, #bbf7d0 100%%); padding: 15px; border-radius: 50%%; margin-bottom: 20px;">
+                                <span style="font-size: 40px;">💰</span>
+                            </div>
+                            <h2 style="color: #16a34a; margin: 0 0 10px 0; font-size: 28px; font-weight: 700;">Payment Evidence Uploaded!</h2>
+                            <p style="color: #6b7280; font-size: 15px; margin: 0;">Your customer has submitted proof of payment</p>
+                        </div>
+                        
+                        <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">Hi <strong style="color: #16a34a;">%s</strong>,</p>
+                        
+                        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 30px 0;">
+                            Great news! <strong>%s</strong> has uploaded proof of payment for Invoice <strong>#%s</strong>. 
+                            The invoice status has been updated to "Pending" and is ready for your review.
+                        </p>
+                        
+                        <!-- Invoice Details Box -->
+                        <div style="background: linear-gradient(135deg, #f0fdf4 0%%, #dcfce7 100%%); padding: 25px; border-radius: 12px; border: 2px solid #22c55e; margin: 30px 0; text-align: center;">
+                            <p style="color: #15803d; font-size: 14px; font-weight: 600; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px;">Invoice Number</p>
+                            <h3 style="color: #16a34a; font-size: 24px; font-weight: 800; margin: 0 0 15px 0;">#%s</h3>
+                            <p style="color: #15803d; font-size: 14px; margin: 0;"><strong>Customer:</strong> %s</p>
+                        </div>
+                        
+                        <!-- CTA Button -->
+                        <div style="text-align: center; margin: 32px 0;">
+                            <a href="%s" style="background: linear-gradient(135deg, #22c55e 0%%, #16a34a 100%%); color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);">
+                                Review Payment Evidence
+                            </a>
+                        </div>
+                        
+                        <div style="background: linear-gradient(135deg, #fef3c7 0%%, #fde68a 100%%); border-left: 4px solid #f59e0b; padding: 15px 20px; border-radius: 8px; margin: 30px 0;">
+                            <p style="color: #92400e; font-size: 14px; margin: 0; line-height: 1.6;">
+                                <strong>⏰ Next Steps:</strong> Please review the uploaded payment evidence and update the invoice status accordingly (Paid/Rejected) from your dashboard.
+                            </p>
+                        </div>
+                        
+                        <p style="color: #64748b; font-size: 14px; line-height: 1.5; margin: 32px 0 0 0;">
+                            You can access your dashboard anytime to manage all your invoices and payments.
+                        </p>
+                        
+                        <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid #e5e7eb;">
+                            <p style="color: #64748b; font-size: 14px; line-height: 1.5; margin: 0 0 8px 0;">
+                                Best regards,<br>
+                                <strong style="color: #16a34a;">The Original Invoice Team</strong>
+                            </p>
+                        </div>
+                    </td>
+                </tr>
+                
+                <!-- Footer -->
+                <tr>
+                    <td style="background: linear-gradient(135deg, #f0fdf4 0%%, #dcfce7 100%%); padding: 32px 40px; text-align: center; border-top: 1px solid #e5e7eb;">
+                        <div style="margin-bottom: 16px;">
+                            <h3 style="color: #16a34a; margin: 0 0 8px 0; font-size: 16px; font-weight: 600;">Original Invoice</h3>
+                            <p style="color: #22c55e; margin: 0; font-size: 14px;">
+                                <a href="mailto:support@originalinvoice.com" style="color: #22c55e; text-decoration: none;">support@originalinvoice.com</a>
+                            </p>
+                        </div>
+                        
+                        <p style="color: #94a3b8; font-size: 12px; margin: 16px 0 0 0;">
+                            © 2025 Original Invoice. All rights reserved.
+                        </p>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+        """.formatted(invoiceNumber, senderName, customerName, invoiceNumber, invoiceNumber, customerName, dashboardUrl);
+    }
 }

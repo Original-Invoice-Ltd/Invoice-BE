@@ -25,6 +25,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import invoice.config.CloudinaryService;
 import invoice.dtos.request.CreateInvoiceRequest;
@@ -218,18 +219,20 @@ public class InvoiceServiceImplementation implements InvoiceService {
         // Send invoice notification email to recipient
         try {
             if (recipient.getEmail() != null) {
+                String paymentUrl = "https://originalinvoice.com/customer/invoice/" + savedInvoice.getId().toString();
                 emailService.sendInvoiceNotificationEmail(
                         recipient.getEmail(),
                         currentUser.getFullName(),
                         savedInvoice.getId().toString(),
-                        "", // frontendUrl not available in create request, can be added if needed
+                        paymentUrl, // Use the payment URL with invoice UUID
                         savedInvoice.getInvoiceNumber(),
                         savedInvoice.getCreationDate() != null ? savedInvoice.getCreationDate().toString() : "N/A",
                         savedInvoice.getDueDate() != null ? savedInvoice.getDueDate().toString() : "N/A",
                         savedInvoice.getTotalDue() != null ? savedInvoice.getTotalDue().toString() : "0.00",
                         recipient.getFullName()
                 );
-                log.info("Invoice notification email sent to {} for invoice {}", recipient.getEmail(), savedInvoice.getInvoiceNumber());
+                log.info("Invoice notification email sent to {} for invoice {} with payment URL: {}", 
+                        recipient.getEmail(), savedInvoice.getInvoiceNumber(), paymentUrl);
             }
         } catch (Exception e) {
             log.warn("Failed to send invoice notification email: {}", e.getMessage());
@@ -605,5 +608,84 @@ public class InvoiceServiceImplementation implements InvoiceService {
                     return mapToResponse(invoice, null, sender);
                 })
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public InvoiceResponse getInvoiceByUuid(UUID uuid) {
+        log.info("Fetching invoice with UUID: {} for public access", uuid);
+        
+        Invoice invoice = invoiceRepository.findById(uuid)
+                .orElseThrow(() -> new ResourceNotFoundException("Invoice not found"));
+        
+        InvoiceSender sender = invoiceSenderRepository.findByInvoice(invoice.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Sender not found"));
+        
+        return mapToResponse(invoice, null, sender);
+    }
+
+    @Override
+    @Transactional
+    public InvoiceResponse uploadPaymentEvidence(UUID invoiceUuid, MultipartFile evidenceFile) {
+        log.info("Uploading payment evidence for invoice UUID: {}", invoiceUuid);
+        
+        // Find the invoice by UUID
+        Invoice invoice = invoiceRepository.findById(invoiceUuid)
+                .orElseThrow(() -> new ResourceNotFoundException("Invoice not found"));
+        
+        // Upload the evidence file to Cloudinary
+        String evidenceUrl;
+        try {
+            evidenceUrl = cloudinaryService.uploadFile(evidenceFile);
+            log.info("Evidence file uploaded successfully: {}", evidenceUrl);
+        } catch (IOException e) {
+            log.error("Failed to upload evidence file: {}", e.getMessage());
+            throw new RuntimeException("Failed to upload evidence file", e);
+        }
+        
+        // Update invoice status to PENDING (evidence URL will be stored separately if needed)
+        invoice.setStatus(Invoice_Status.PENDING);
+        
+        Invoice updatedInvoice = invoiceRepository.save(invoice);
+        log.info("Invoice status updated to PENDING for invoice: {}", invoiceUuid);
+        
+        // Get invoice sender and recipient for notifications
+        InvoiceSender sender = invoiceSenderRepository.findByInvoice(invoice.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Sender not found"));
+        
+        User invoiceSender = invoice.getUser();
+        String customerName = invoice.getRecipient() != null ? 
+                invoice.getRecipient().getFullName() : "Customer";
+        
+        // Send in-app notification to invoice sender
+        try {
+            notificationService.createNotification(
+                invoiceSender,
+                "Payment Evidence Uploaded",
+                "Customer " + customerName + " has uploaded proof of payment for Invoice " + invoice.getInvoiceNumber(),
+                NotificationType.PAYMENT_EVIDENCE_UPLOADED,
+                invoice.getId(),
+                "INVOICE"
+            );
+            log.info("In-app notification sent to invoice sender: {}", invoiceSender.getEmail());
+        } catch (Exception e) {
+            log.warn("Failed to create in-app notification: {}", e.getMessage());
+        }
+        
+        // Send email notification to invoice sender
+        try {
+            String dashboardUrl = "https://myapp.com/dashboard/invoices/" + invoice.getId();
+            emailService.sendPaymentEvidenceNotificationEmail(
+                invoiceSender.getEmail(),
+                invoiceSender.getFullName(),
+                invoice.getInvoiceNumber(),
+                customerName,
+                dashboardUrl
+            );
+            log.info("Email notification sent to invoice sender: {}", invoiceSender.getEmail());
+        } catch (Exception e) {
+            log.warn("Failed to send email notification: {}", e.getMessage());
+        }
+        
+        return mapToResponse(updatedInvoice, null, sender);
     }
 }
