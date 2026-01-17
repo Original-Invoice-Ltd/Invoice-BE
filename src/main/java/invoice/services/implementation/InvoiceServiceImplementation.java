@@ -194,7 +194,7 @@ public class InvoiceServiceImplementation implements InvoiceService {
         InvoiceRecipient recipient = new InvoiceRecipient();
         if (client != null) {
             // Populate recipient from client data
-            recipient.setFullName(client.getFullName());
+            recipient.setFullNabbme(client.getFullName());
             recipient.setBusinessName(client.getBusinessName());
             recipient.setEmail(client.getEmail());
             recipient.setPhone(client.getPhone());
