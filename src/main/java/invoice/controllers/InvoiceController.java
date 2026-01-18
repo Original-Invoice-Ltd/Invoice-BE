@@ -91,10 +91,10 @@ public class InvoiceController {
         }
     }
 
-    @GetMapping("/all-user")
-    public ResponseEntity<?> getAllUserInvoices(Principal principal) {
+    @GetMapping("/all-user/{userId}")
+    public ResponseEntity<?> getAllUserInvoices(@PathVariable UUID userId) {
         try {
-            List<InvoiceResponse> responses = invoiceService.getAllUserInvoices();
+            List<InvoiceResponse> responses = invoiceService.getAllUserInvoices(userId);
             return ResponseEntity.ok(responses);
         }catch (OriginalInvoiceBaseException ex){
             return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
@@ -161,6 +161,16 @@ public class InvoiceController {
         try {
             InvoiceResponse response = invoiceService.getInvoiceByUuid(uuid);
             return ResponseEntity.ok(response);
+        } catch (OriginalInvoiceBaseException ex) {
+            return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
+        }
+    }
+
+    @GetMapping("/stats/received")
+    public ResponseEntity<?> getInvoiceStats(@RequestParam String email) {
+        try {
+            Map<String, Long> stats = invoiceService.getInvoiceStats(email);
+            return ResponseEntity.ok(stats);
         } catch (OriginalInvoiceBaseException ex) {
             return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
         }
