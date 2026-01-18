@@ -24,7 +24,8 @@ public class SecurityUtils {
                 "/v3/api-docs/**",
                 "/v3/api-docs",
                 "/swagger-resources/**",
-                "/webjars/**"
+                "/webjars/**",
+                "/api/subscriptions/webhook"
     );
 
 }

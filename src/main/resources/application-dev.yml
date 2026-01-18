@@ -59,6 +59,10 @@ oauth:
 app:
   frontend:
     dashboard-url: ${FRONTEND_DASHBOARD_URL:http://localhost:3000/dashboard/overview}
+  paystack-secret-key: ${PAYSTACK_SECRET_KEY}
+  paystack-essentials-plan-code: PLN_1hgx8jfrfx39u44
+  paystack-premium-plan-code: PLN_8y3o8kp1wbe5h1j
+  paystack-mock-mode: true  # Enable mock mode for development when Cloudflare blocks
 
 paystack:
   api:
