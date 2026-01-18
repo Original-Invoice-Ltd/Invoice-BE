@@ -394,6 +394,27 @@ public class InvoiceServiceImplementation implements InvoiceService {
     }
 
     @Override
+    public List<InvoiceResponse> getAllUserInvoices(UUID userId) {
+        log.info("Fetching all invoices for user ID: {}", userId);
+        
+        // First find the user by ID
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + userId));
+        
+        // Then find all invoices related to that user
+        List<Invoice> invoices = invoiceRepository.findAllByUserId(user.getId());
+        return invoices.stream()
+                .map(invoice -> {
+                    // Since clientId was removed from Invoice model, we pass null for client
+                    // The mapToResponse method will use InvoiceRecipient data instead
+                    InvoiceSender sender = invoiceSenderRepository.findByInvoice(invoice.getId())
+                            .orElseThrow(()->new ResourceNotFoundException("Sender not found"));
+                    return mapToResponse(invoice, null, sender);
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Override
     @Transactional
     public InvoiceResponse updateInvoice(UUID id, CreateInvoiceRequest request) {
         User currentUser = getCurrentUser();
