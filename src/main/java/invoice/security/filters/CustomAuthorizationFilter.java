@@ -58,21 +58,31 @@ public class CustomAuthorizationFilter extends OncePerRequestFilter {
         }
         
         String requestPath = request.getRequestURI();
+        log.info("Processing request: {} {}", request.getMethod(), requestPath);
+        
         boolean isRequestPathPublic = isPublicEndpoint(requestPath);
         if (isRequestPathPublic) {
             log.info("Authorization not needed for public endpoint: {}", requestPath);
             filterChain.doFilter(request, response);
             return;
         }
+        
+        log.info("Protected endpoint requires authentication: {}", requestPath);
         // Check for token in Authorization header first
         String authorizationHeader = request.getHeader(AUTHORIZATION);
         String token = null;
         
         if (authorizationHeader != null && authorizationHeader.startsWith(JWT_PREFIX)) {
             token = authorizationHeader.substring(JWT_PREFIX.length()).strip();
+            log.info("Found token in Authorization header");
         } else {
             // Check for token in cookies if not found in header
             token = getTokenFromCookies(request);
+            if (token != null) {
+                log.info("Found token in cookies");
+            } else {
+                log.warn("No token found in Authorization header or cookies");
+            }
         }
         
         if (token != null) {

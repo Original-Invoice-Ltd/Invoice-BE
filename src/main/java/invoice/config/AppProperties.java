@@ -10,6 +10,10 @@ import org.springframework.stereotype.Component;
 public class AppProperties {
     
     private Frontend frontend = new Frontend();
+    private String paystackSecretKey;
+    private String paystackEssentialsPlanCode;
+    private String paystackPremiumPlanCode;
+    private boolean paystackMockMode = false; // For development when Cloudflare blocks
     
     @Data
     public static class Frontend {
