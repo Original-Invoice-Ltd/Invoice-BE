@@ -81,20 +81,10 @@ public class InvoiceController {
         }
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<?> getInvoiceById(Principal principal, @PathVariable UUID id) {
+    @GetMapping("/all-user")
+    public ResponseEntity<?> getAllUserInvoices(Principal principal) {
         try {
-            InvoiceResponse response = invoiceService.getInvoiceById(id);
-            return ResponseEntity.ok(response);
-        }catch (OriginalInvoiceBaseException ex){
-            return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
-        }
-    }
-
-    @GetMapping("/all-user/{userId}")
-    public ResponseEntity<?> getAllUserInvoices(@PathVariable UUID userId) {
-        try {
-            List<InvoiceResponse> responses = invoiceService.getAllUserInvoices(userId);
+            List<InvoiceResponse> responses = invoiceService.getAllUserInvoices();
             return ResponseEntity.ok(responses);
         }catch (OriginalInvoiceBaseException ex){
             return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
@@ -106,6 +96,16 @@ public class InvoiceController {
         try {
             List<InvoiceResponse> responses = invoiceService.getAllInvoices();
             return ResponseEntity.ok(responses);
+        }catch (OriginalInvoiceBaseException ex){
+            return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
+        }
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getInvoiceById(Principal principal, @PathVariable UUID id) {
+        try {
+            InvoiceResponse response = invoiceService.getInvoiceById(id);
+            return ResponseEntity.ok(response);
         }catch (OriginalInvoiceBaseException ex){
             return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
         }
