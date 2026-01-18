@@ -330,7 +330,7 @@ public class SubscriptionController {
             String email = principal.getName();
             User user = userService.findByEmail(email);
             
-            Map<String, Object> result = subscriptionService.disableSubscription(user);
+            Map<String, Object> result = subscriptionService.cancelSubscription(user);
             
             if ((Boolean) result.get("success")) {
                 return ResponseEntity.ok(result);
