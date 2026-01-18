@@ -16,6 +16,9 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
     @Query("SELECT i FROM Invoice i WHERE i.user.id = ?1 ORDER BY i.id DESC")
     List<Invoice> findAllByUserId(UUID userId);
     
+    @Query("SELECT i FROM Invoice i WHERE i.recipient.email = ?1 ORDER BY i.creationDate DESC")
+    List<Invoice> findAllByRecipientEmail(String email);
+    
     @Query("SELECT i FROM Invoice i WHERE i.user.id = ?1 ORDER BY i.id DESC LIMIT 1")
     Optional<Invoice> findLastInvoiceByUserId(UUID userId);
 }

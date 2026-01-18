@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.security.Principal;
 import java.util.List;
@@ -130,6 +131,48 @@ public class InvoiceController {
             return ResponseEntity.noContent().build();
         }catch (OriginalInvoiceBaseException ex){
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    // Public endpoint for customers to upload payment evidence (no authentication required)
+    @PostMapping(value = "/{uuid}/upload-evidence", consumes = {"multipart/form-data"})
+    public ResponseEntity<?> uploadPaymentEvidence(
+            @PathVariable UUID uuid,
+            @RequestParam("evidence") MultipartFile evidenceFile) {
+        try {
+            if (evidenceFile == null || evidenceFile.isEmpty()) {
+                return new ResponseEntity<>("Evidence file is required", HttpStatus.BAD_REQUEST);
+            }
+            
+            InvoiceResponse response = invoiceService.uploadPaymentEvidence(uuid, evidenceFile);
+            return ResponseEntity.ok(response);
+        } catch (OriginalInvoiceBaseException ex) {
+            return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
+        } catch (Exception ex) {
+            System.out.println("Unexpected error during evidence upload: " + ex.getMessage());
+            ex.printStackTrace();
+            return new ResponseEntity<>("Internal server error: " + ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // Public endpoint for customers to view invoice details (no authentication required)
+    @GetMapping("/public/{uuid}")
+    public ResponseEntity<?> getInvoiceByUuid(@PathVariable UUID uuid) {
+        try {
+            InvoiceResponse response = invoiceService.getInvoiceByUuid(uuid);
+            return ResponseEntity.ok(response);
+        } catch (OriginalInvoiceBaseException ex) {
+            return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
+        }
+    }
+
+    @GetMapping("/stats/received")
+    public ResponseEntity<?> getInvoiceStats(@RequestParam String email) {
+        try {
+            Map<String, Long> stats = invoiceService.getInvoiceStats(email);
+            return ResponseEntity.ok(stats);
+        } catch (OriginalInvoiceBaseException ex) {
+            return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
         }
     }
 }
