@@ -2,7 +2,10 @@ package invoice.services.implementation;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.regex.Matcher;
@@ -25,6 +28,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import invoice.config.CloudinaryService;
 import invoice.dtos.request.CreateInvoiceRequest;
@@ -193,7 +197,6 @@ public class InvoiceServiceImplementation implements InvoiceService {
         // Create invoice recipient (Bill To) - populate from client data if available
         InvoiceRecipient recipient = new InvoiceRecipient();
         if (client != null) {
-            // Populate recipient from client data
             recipient.setFullName(client.getFullName());
             recipient.setBusinessName(client.getBusinessName());
             recipient.setEmail(client.getEmail());
@@ -218,18 +221,20 @@ public class InvoiceServiceImplementation implements InvoiceService {
         // Send invoice notification email to recipient
         try {
             if (recipient.getEmail() != null) {
+                String paymentUrl = "https://originalinvoice.com/customer/invoice/" + savedInvoice.getId().toString();
                 emailService.sendInvoiceNotificationEmail(
                         recipient.getEmail(),
                         currentUser.getFullName(),
                         savedInvoice.getId().toString(),
-                        "", // frontendUrl not available in create request, can be added if needed
+                        paymentUrl, // Use the payment URL with invoice UUID
                         savedInvoice.getInvoiceNumber(),
                         savedInvoice.getCreationDate() != null ? savedInvoice.getCreationDate().toString() : "N/A",
                         savedInvoice.getDueDate() != null ? savedInvoice.getDueDate().toString() : "N/A",
                         savedInvoice.getTotalDue() != null ? savedInvoice.getTotalDue().toString() : "0.00",
                         recipient.getFullName()
                 );
-                log.info("Invoice notification email sent to {} for invoice {}", recipient.getEmail(), savedInvoice.getInvoiceNumber());
+                log.info("Invoice notification email sent to {} for invoice {} with payment URL: {}", 
+                        recipient.getEmail(), savedInvoice.getInvoiceNumber(), paymentUrl);
             }
         } catch (Exception e) {
             log.warn("Failed to send invoice notification email: {}", e.getMessage());
@@ -380,6 +385,27 @@ public class InvoiceServiceImplementation implements InvoiceService {
         log.info("Fetching all invoices for user: {}", currentUser.getEmail());
         
         List<Invoice> invoices = invoiceRepository.findAllByUserId(currentUser.getId());
+        return invoices.stream()
+                .map(invoice -> {
+                    // Since clientId was removed from Invoice model, we pass null for client
+                    // The mapToResponse method will use InvoiceRecipient data instead
+                    InvoiceSender sender = invoiceSenderRepository.findByInvoice(invoice.getId())
+                            .orElseThrow(()->new ResourceNotFoundException("Sender not found"));
+                    return mapToResponse(invoice, null, sender);
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<InvoiceResponse> getAllUserInvoices(UUID userId) {
+        log.info("Fetching all invoices for user ID: {}", userId);
+        
+        // First find the user by ID
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + userId));
+        
+        // Then find all invoices related to that user
+        List<Invoice> invoices = invoiceRepository.findAllByUserId(user.getId());
         return invoices.stream()
                 .map(invoice -> {
                     // Since clientId was removed from Invoice model, we pass null for client
@@ -605,5 +631,133 @@ public class InvoiceServiceImplementation implements InvoiceService {
                     return mapToResponse(invoice, null, sender);
                 })
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public InvoiceResponse getInvoiceByUuid(UUID uuid) {
+        log.info("Fetching invoice with UUID: {} for public access", uuid);
+        
+        Invoice invoice = invoiceRepository.findById(uuid)
+                .orElseThrow(() -> new ResourceNotFoundException("Invoice not found"));
+        
+        InvoiceSender sender = invoiceSenderRepository.findByInvoice(invoice.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Sender not found"));
+        
+        return mapToResponse(invoice, null, sender);
+    }
+
+    @Override
+    @Transactional
+    public InvoiceResponse uploadPaymentEvidence(UUID invoiceUuid, MultipartFile evidenceFile) {
+        log.info("Uploading payment evidence for invoice UUID: {}", invoiceUuid);
+        
+        // Find the invoice by UUID
+        Invoice invoice = invoiceRepository.findById(invoiceUuid)
+                .orElseThrow(() -> new ResourceNotFoundException("Invoice not found"));
+        
+        // Upload the evidence file to Cloudinary
+        String evidenceUrl;
+        try {
+            evidenceUrl = cloudinaryService.uploadFile(evidenceFile);
+            log.info("Evidence file uploaded successfully: {}", evidenceUrl);
+        } catch (IOException e) {
+            log.error("Failed to upload evidence file: {}", e.getMessage());
+            throw new RuntimeException("Failed to upload evidence file", e);
+        }
+        
+        // Update invoice status to PENDING (evidence URL will be stored separately if needed)
+        invoice.setStatus(Invoice_Status.PENDING);
+        
+        Invoice updatedInvoice = invoiceRepository.save(invoice);
+        log.info("Invoice status updated to PENDING for invoice: {}", invoiceUuid);
+        
+        // Get invoice sender and recipient for notifications
+        InvoiceSender sender = invoiceSenderRepository.findByInvoice(invoice.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Sender not found"));
+        
+        User invoiceSender = invoice.getUser();
+        String customerName = invoice.getRecipient() != null ? 
+                invoice.getRecipient().getFullName() : "Customer";
+        
+        // Send in-app notification to invoice sender
+        try {
+            notificationService.createNotification(
+                invoiceSender,
+                "Payment Evidence Uploaded",
+                "Customer " + customerName + " has uploaded proof of payment for Invoice " + invoice.getInvoiceNumber(),
+                NotificationType.PAYMENT_EVIDENCE_UPLOADED,
+                invoice.getId(),
+                "INVOICE"
+            );
+            log.info("In-app notification sent to invoice sender: {}", invoiceSender.getEmail());
+        } catch (Exception e) {
+            log.warn("Failed to create in-app notification: {}", e.getMessage());
+        }
+        
+        // Send email notification to invoice sender
+        try {
+            String dashboardUrl = "https://myapp.com/dashboard/invoices/" + invoice.getId();
+            emailService.sendPaymentEvidenceNotificationEmail(
+                invoiceSender.getEmail(),
+                invoiceSender.getFullName(),
+                invoice.getInvoiceNumber(),
+                customerName,
+                dashboardUrl
+            );
+            log.info("Email notification sent to invoice sender: {}", invoiceSender.getEmail());
+        } catch (Exception e) {
+            log.warn("Failed to send email notification: {}", e.getMessage());
+        }
+        
+        return mapToResponse(updatedInvoice, null, sender);
+    }
+
+    @Override
+    public Map<String, Long> getInvoiceStats(String email) {
+        log.info("Fetching invoice statistics for recipient email: {}", email);
+        
+        // Get all invoices sent to this email address
+        List<Invoice> invoices = invoiceRepository.findAllByRecipientEmail(email);
+        
+        // Get current date/time for overdue calculation
+        LocalDateTime now = LocalDateTime.now();
+        
+        // Calculate statistics
+        long totalReceived = invoices.size();
+        
+        long paid = invoices.stream()
+                .filter(invoice -> invoice.getStatus() == Invoice_Status.PAID)
+                .count();
+        
+        long overdue = invoices.stream()
+                .filter(invoice -> 
+                    invoice.getStatus() == Invoice_Status.OVERDUE || 
+                    (invoice.getDueDate() != null && 
+                     invoice.getDueDate().isBefore(now) && 
+                     invoice.getStatus() != Invoice_Status.PAID))
+                .count();
+        
+        long pending = invoices.stream()
+                .filter(invoice -> invoice.getStatus() == Invoice_Status.PENDING)
+                .count();
+        
+        long unpaid = invoices.stream()
+                .filter(invoice -> 
+                    invoice.getStatus() == Invoice_Status.UNPAID || 
+                    invoice.getStatus() == Invoice_Status.OUTSTANDING)
+                .count();
+        
+        // Build response map
+        Map<String, Long> stats = new HashMap<>();
+        stats.put("totalReceived", totalReceived);
+        stats.put("paid", paid);
+        stats.put("overdue", overdue);
+        stats.put("pending", pending);
+        stats.put("unpaid", unpaid);
+        
+        log.info("Invoice stats for recipient {}: Total={}, Paid={}, Overdue={}, Pending={}, Unpaid={}", 
+                email, totalReceived, paid, overdue, pending, unpaid);
+        
+        return stats;
     }
 }

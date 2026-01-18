@@ -17,6 +17,8 @@ public class SecurityUtils {
                 "/api/users/isUserValid/**",
                 "/api/auth/**",
                 "/oauth/**",
+                "/api/invoices/*/upload-evidence", // Public endpoint for payment evidence upload
+                "/api/invoices/public/**", // Public endpoint for viewing invoice details
                 "/swagger-ui/**",
                 "/swagger-ui.html",
                 "/v3/api-docs/**",
