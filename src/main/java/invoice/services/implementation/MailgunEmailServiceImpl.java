@@ -669,174 +669,115 @@ public class MailgunEmailServiceImpl implements EmailService {
         """.formatted(firstName, viewInvoiceUrl);
     }
 
-    private String buildInvoiceNotificationEmailBody(String firstName, String viewInvoiceUrl, String invoiceNumber, String invoiceDate, String dueDate, String amount, String clientName) {
-        return """
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Invoice #%s sent to %s</title>
-        </head>
-        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: linear-gradient(135deg, #e0f2fe 0%%, #bfdbfe 100%%); padding: 40px 20px;">
-            <table cellpadding="0" cellspacing="0" border="0" width="100%%" style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
-                <!-- Header with Logo -->
-                <tr>
-                    <td style="background-color: #EFF8FF80; padding: 40px 40px 20px 40px; text-align: center;">
-                        <div style="display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
-                            <svg width="120" height="40" viewBox="0 0 120 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <text x="60" y="25" text-anchor="middle" style="font-family: Arial, sans-serif; font-size: 18px; font-weight: bold; fill: #2F80ED;">Original Invoice</text>
-                            </svg>
-                        </div>
-                    </td>
-                </tr>
-                
-                <!-- Main Content - White Background -->
-                <tr>
-                    <td style="padding: 40px; background-color: white; border-radius: 12px; margin: 20px;">
-                        <h2 style="color: #1e293b; margin: 0 0 24px 0; font-size: 28px; font-weight: 700; line-height: 1.2;">Invoice #%s sent to %s</h2>
-                        
-                        <p style="color: #475569; font-size: 16px; line-height: 1.6; margin: 0 0 8px 0;">Hi %s,</p>
-                        
-                        <p style="color: #64748b; font-size: 16px; line-height: 1.6; margin: 0 0 32px 0;">
-                            Your invoice #%s for %s has been successfully sent to %s.
+   private String buildInvoiceNotificationEmailBody(String firstName, String viewInvoiceUrl, String invoiceNumber, String invoiceDate, String dueDate, String amount, String clientName) {
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Invoice #%s for %s</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: linear-gradient(135deg, #e0f2fe 0%%, #bfdbfe 100%%); padding: 40px 20px;">
+        <table cellpadding="0" cellspacing="0" border="0" width="100%%" style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+            <tr>
+                <td style="background-color: #EFF8FF80; padding: 40px 40px 20px 40px; text-align: center;">
+                    <div style="display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+                        <svg width="120" height="40" viewBox="0 0 120 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <text x="60" y="25" text-anchor="middle" style="font-family: Arial, sans-serif; font-size: 18px; font-weight: bold; fill: #2F80ED;">Original Invoice</text>
+                        </svg>
+                    </div>
+                </td>
+            </tr>
+            
+            <tr>
+                <td style="padding: 40px; background-color: white; border-radius: 12px; margin: 20px;">
+                    <h2 style="color: #1e293b; margin: 0 0 24px 0; font-size: 28px; font-weight: 700; line-height: 1.2;">Your invoice is ready</h2>
+                    
+                    <p style="color: #475569; font-size: 16px; line-height: 1.6; margin: 0 0 8px 0;">Hi %s,</p>
+                    
+                    <p style="color: #64748b; font-size: 16px; line-height: 1.6; margin: 0 0 32px 0;">
+                        %s has sent you invoice #%s for <strong>%s</strong>. Use the button below to view the details and complete your payment.
+                    </p>
+                    
+                    <div style="text-align: center; margin: 32px 0;">
+                        <p style="color: #64748b; font-size: 14px; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">AMOUNT DUE</p>
+                        <h1 style="color: #1e293b; margin: 0 0 24px 0; font-size: 36px; font-weight: 800;">%s</h1>
+                    </div>
+                    
+                    <table cellpadding="0" cellspacing="0" border="0" width="100%%" style="font-size: 14px; margin: 24px 0;">
+                        <tr>
+                            <td style="color: #64748b; padding: 12px 0; width: 40%%; font-weight: 500;">Invoice No</td>
+                            <td style="color: #1e293b; padding: 12px 0; text-align: right; font-weight: 600;">%s</td>
+                        </tr>
+                        <tr>
+                            <td style="color: #64748b; padding: 12px 0; font-weight: 500;">Invoice Date</td>
+                            <td style="color: #1e293b; padding: 12px 0; text-align: right; font-weight: 600;">%s</td>
+                        </tr>
+                        <tr>
+                            <td style="color: #64748b; padding: 12px 0; font-weight: 500;">Due Date</td>
+                            <td style="color: #1e293b; padding: 12px 0; text-align: right; font-weight: 600;">%s</td>
+                        </tr>
+                    </table>
+                    
+                    <div style="text-align: center; margin: 32px 0;">
+                        <a href="%s" style="background: #3b82f6; color: white; padding: 14px 40px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);">
+                            View and Pay Invoice
+                        </a>
+                    </div>
+                    
+                    <div style="text-align: center; margin: 24px 0;">
+                        <p style="color: #64748b; font-size: 12px; margin: 0;">
+                            Powered by <span style="color: #2F80ED; font-weight: 600;">Original Invoice</span>
                         </p>
-                        
-                        <!-- Invoice Amount Box -->
-                        <div style="text-align: center; margin: 32px 0;">
-                            <p style="color: #64748b; font-size: 14px; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">INVOICE AMOUNT</p>
-                            <h1 style="color: #1e293b; margin: 0 0 24px 0; font-size: 36px; font-weight: 800;">%s</h1>
-                        </div>
-                        
-                        <!-- Invoice Details Table -->
-                        <table cellpadding="0" cellspacing="0" border="0" width="100%%" style="font-size: 14px; margin: 24px 0;">
-                            <tr>
-                                <td style="color: #64748b; padding: 12px 0; width: 40%%; font-weight: 500;">Invoice No</td>
-                                <td style="color: #1e293b; padding: 12px 0; text-align: right; font-weight: 600;">%s</td>
-                            </tr>
-                            <tr>
-                                <td style="color: #64748b; padding: 12px 0; font-weight: 500;">Invoice Date</td>
-                                <td style="color: #1e293b; padding: 12px 0; text-align: right; font-weight: 600;">%s</td>
-                            </tr>
-                            <tr>
-                                <td style="color: #64748b; padding: 12px 0; font-weight: 500;">Due Date</td>
-                                <td style="color: #1e293b; padding: 12px 0; text-align: right; font-weight: 600;">%s</td>
-                            </tr>
-                        </table>
-                        
-                        <!-- CTA Button -->
-                        <div style="text-align: center; margin: 32px 0;">
-                            <a href="%s" style="background: #3b82f6; color: white; padding: 14px 40px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);">
-                                View Invoice
-                            </a>
-                        </div>
-                        
-                        <div style="text-align: center; margin: 24px 0;">
-                            <p style="color: #64748b; font-size: 12px; margin: 0;">
-                                Powered by <span style="color: #2F80ED; font-weight: 600;">Original Invoice</span>
-                            </p>
-                        </div>
-                        
-                        <p style="color: #64748b; font-size: 14px; line-height: 1.5; margin: 32px 0 0 0; text-align: center;">
-                            Powered by <a href="#" style="color: #3b82f6; text-decoration: none;">Original Invoice</a>
+                    </div>
+                    
+                    <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid #f1f5f9;">
+                        <p style="color: #64748b; font-size: 14px; line-height: 1.5; margin: 0 0 8px 0;">
+                            Best regards,<br>
+                            <strong style="color: #1e293b;">The Original Invoice Team</strong>
                         </p>
-                        
-                        <p style="color: #64748b; font-size: 14px; line-height: 1.5; margin: 32px 0 0 0;">
-                            We'll notify you once your client views or pays this invoice.
+                    </div>
+                </td>
+            </tr>
+            
+            <tr>
+                <td style="background: linear-gradient(135deg, #e0f2fe 0%%, #bfdbfe 100%%); padding: 32px 40px; text-align: center;">
+                    <div style="margin-bottom: 16px;">
+                        <h3 style="color: #1e293b; margin: 0 0 8px 0; font-size: 16px; font-weight: 600;">Original Invoice</h3>
+                        <p style="color: #3b82f6; margin: 0; font-size: 14px;">
+                            <a href="mailto:support@originalinvoice.com" style="color: #3b82f6; text-decoration: none;">support@originalinvoice.com</a>
                         </p>
+                    </div>
+                    
+                    <div style="margin: 20px 0;">
+                        <a href="#" style="display: inline-block; margin: 0 6px; text-decoration: none;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"><rect width="23" height="23" x=".5" y=".5" fill="#BFE2FE" rx="3.5"/><rect width="23" height="23" x=".5" y=".5" stroke="#fff" rx="3.5"/><g clip-path="url(#a_li)"><path fill="#0A66C2" d="M18.819 4H5.18A1.181 1.181 0 0 0 4 5.181V18.82A1.181 1.181 0 0 0 5.181 20H18.82A1.181 1.181 0 0 0 20 18.819V5.18A1.181 1.181 0 0 0 18.819 4ZM8.769 17.63H6.363V9.989H8.77v7.641Zm-1.205-8.7a1.381 1.381 0 1 1 1.39-1.38 1.361 1.361 0 0 1-1.39 1.38Zm10.072 8.707H15.23v-4.175c0-1.23-.523-1.61-1.199-1.61-.713 0-1.413.537-1.413 1.641v4.144h-2.406V9.994h2.314v1.06h.03c.233-.47 1.046-1.274 2.287-1.274 1.343 0 2.793.797 2.793 3.13l-.001 4.727Z"/></g><defs><clipPath id="a_li"><path fill="#fff" d="M4 4h16v16H4z"/></clipPath></defs></svg>
+                        </a>
                         
-                        <div style="margin-top: 40px; padding-top: 24px;">
-                            <p style="color: #64748b; font-size: 14px; line-height: 1.5; margin: 0 0 8px 0;">
-                                Warm regards,<br>
-                                <strong style="color: #1e293b;">The Original Invoice Team</strong>
-                            </p>
-                        </div>
-                    </td>
-                </tr>
-                
-                <!-- Footer -->
-                <tr>
-                    <td style="background: linear-gradient(135deg, #e0f2fe 0%%, #bfdbfe 100%%); padding: 32px 40px; text-align: center;">
-                        <div style="margin-bottom: 16px;">
-                            <h3 style="color: #1e293b; margin: 0 0 8px 0; font-size: 16px; font-weight: 600;">Original Invoice</h3>
-                            <p style="color: #3b82f6; margin: 0; font-size: 14px;">
-                                <a href="mailto:support@originalinvoice.com" style="color: #3b82f6; text-decoration: none;">support@originalinvoice.com</a>
-                            </p>
-                        </div>
+                        <a href="#" style="display: inline-block; margin: 0 6px; text-decoration: none;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"><rect width="23" height="23" x=".5" y=".5" fill="#BFE2FE" rx="3.5"/><rect width="23" height="23" x=".5" y=".5" stroke="#fff" rx="3.5"/><g fill="#000100" clip-path="url(#a_ig)"><path d="M12 5.44c2.137 0 2.39.01 3.231.047.781.035 1.203.166 1.485.276.371.143.64.318.918.596.282.282.453.547.597.92.11.28.24.705.275 1.483.038.844.047 1.097.047 3.232 0 2.137-.01 2.39-.047 3.231-.034.781-.165 1.203-.275 1.484-.144.372-.319.641-.597.92a2.46 2.46 0 0 1-.918.596c-.282.11-.707.24-1.485.275-.844.038-1.097.047-3.231.047-2.137 0-2.39-.01-3.231-.047-.782-.034-1.203-.166-1.485-.275a2.472 2.472 0 0 1-.918-.597 2.46 2.46 0 0 1-.597-.919c-.11-.28-.24-.706-.275-1.484-.038-.844-.047-1.097-.047-3.231 0-2.138.01-2.39.047-3.232.034-.78.165-1.203.275-1.484.143-.372.319-.64.597-.919a2.46 2.46 0 0 1 .918-.596c.282-.11.707-.241 1.485-.276.84-.037 1.094-.046 3.231-.046ZM12 4c-2.172 0-2.444.01-3.297.047-.85.037-1.434.175-1.94.372a3.905 3.905 0 0 0-1.42.925 3.92 3.92 0 0 0-.924 1.415c-.197.51-.335 1.091-.372 1.941C4.009 9.556 4 9.828 4 12c0 2.172.01 2.444.047 3.297.037.85.175 1.434.372 1.94.206.529.478.976.925 1.42.443.443.89.718 1.415.921.51.197 1.091.335 1.941.372.853.038 1.125.047 3.297.047s2.444-.01 3.297-.047c.85-.037 1.434-.175 1.94-.372a3.91 3.91 0 0 0 1.416-.922 3.91 3.91 0 0 0 .922-1.415c.197-.51.334-1.091.372-1.941.037-.853.047-1.125.047-3.297s-.01-2.444-.047-3.297c-.038-.85-.175-1.434-.372-1.94a3.748 3.748 0 0 0-.916-1.422 3.911 3.911 0 0 0-1.415-.922c-.51-.197-1.091-.334-1.941-.372C14.444 4.01 14.172 4 12 4Z"/><path d="M12 7.89a4.11 4.11 0 0 0 0 8.22 4.11 4.11 0 0 0 0-8.22Zm0 6.776a2.666 2.666 0 1 1 0-5.332 2.666 2.666 0 0 1 0 5.332ZM17.231 7.728a.96.96 0 1 1-1.919 0 .96.96 0 0 1 1.92 0Z"/></g><defs><clipPath id="a_ig"><path fill="#fff" d="M4 4h16v16H4z"/></clipPath></defs></svg>
+                        </a>
                         
-                        <!-- Social Media Icons with SVGs -->
-                        <div style="margin: 20px 0;">
-                            <!-- LinkedIn -->
-                            <a href="#" style="display: inline-block; margin: 0 6px; text-decoration: none;">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <rect x="0.5" y="0.5" width="23" height="23" rx="3.5" fill="#BFE2FE"/>
-                                    <rect x="0.5" y="0.5" width="23" height="23" rx="3.5" stroke="white"/>
-                                    <g clip-path="url(#clip0)">
-                                        <path d="M18.8189 4H5.18111C4.86786 4 4.56744 4.12444 4.34594 4.34594C4.12444 4.56744 4 4.86786 4 5.18111V18.8189C4 19.1321 4.12444 19.4326 4.34594 19.6541C4.56744 19.8756 4.86786 20 5.18111 20H18.8189C19.1321 20 19.4326 19.8756 19.6541 19.6541C19.8756 19.4326 20 19.1321 20 18.8189V5.18111C20 4.86786 19.8756 4.56744 19.6541 4.34594C19.4326 4.12444 19.1321 4 18.8189 4ZM8.76889 17.63H6.36333V9.98889H8.76889V17.63ZM7.56444 8.93C7.29158 8.92846 7.02528 8.84613 6.79916 8.69339C6.57304 8.54065 6.39723 8.32435 6.29392 8.07179C6.19061 7.81923 6.16443 7.54173 6.21869 7.2743C6.27294 7.00688 6.4052 6.76152 6.59877 6.56919C6.79234 6.37686 7.03854 6.24618 7.30631 6.19364C7.57408 6.1411 7.85141 6.16906 8.1033 6.27399C8.35519 6.37892 8.57036 6.55611 8.72164 6.78321C8.87293 7.01031 8.95355 7.27713 8.95333 7.55C8.95591 7.73269 8.92167 7.91403 8.85267 8.0832C8.78368 8.25238 8.68132 8.40593 8.55171 8.53471C8.42211 8.66349 8.2679 8.76486 8.09828 8.83277C7.92867 8.90068 7.74711 8.93375 7.56444 8.93ZM17.6356 17.6367H15.2311V13.4622C15.2311 12.2311 14.7078 11.8511 14.0322 11.8511C13.3189 11.8511 12.6189 12.3889 12.6189 13.4933V17.6367H10.2133V9.99445H12.5267V11.0533H12.5578C12.79 10.5833 13.6033 9.78 14.8444 9.78C16.1867 9.78 17.6367 10.5767 17.6367 12.91L17.6356 17.6367Z" fill="#0A66C2"/>
-                                    </g>
-                                    <defs>
-                                        <clipPath id="clip0">
-                                            <rect width="16" height="16" fill="white" transform="translate(4 4)"/>
-                                        </clipPath>
-                                    </defs>
-                                </svg>
-                            </a>
-                            
-                            <!-- Instagram -->
-                            <a href="#" style="display: inline-block; margin: 0 6px; text-decoration: none;">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <rect x="0.5" y="0.5" width="23" height="23" rx="3.5" fill="#BFE2FE"/>
-                                    <rect x="0.5" y="0.5" width="23" height="23" rx="3.5" stroke="white"/>
-                                    <g clip-path="url(#clip1)">
-                                        <path d="M12 5.44062C14.1375 5.44062 14.3906 5.45 15.2313 5.4875C16.0125 5.52187 16.4344 5.65313 16.7156 5.7625C17.0875 5.90625 17.3563 6.08125 17.6344 6.35938C17.9156 6.64062 18.0875 6.90625 18.2313 7.27813C18.3406 7.55938 18.4719 7.98438 18.5063 8.7625C18.5438 9.60625 18.5531 9.85938 18.5531 11.9938C18.5531 14.1313 18.5438 14.3844 18.5063 15.225C18.4719 16.0063 18.3406 16.4281 18.2313 16.7094C18.0875 17.0813 17.9125 17.35 17.6344 17.6281C17.3531 17.9094 17.0875 18.0813 16.7156 18.225C16.4344 18.3344 16.0094 18.4656 15.2313 18.5C14.3875 18.5375 14.1344 18.5469 12 18.5469C9.8625 18.5469 9.60938 18.5375 8.76875 18.5C7.9875 18.4656 7.56563 18.3344 7.28438 18.225C6.9125 18.0813 6.64375 17.9063 6.36563 17.6281C6.08438 17.3469 5.9125 17.0813 5.76875 16.7094C5.65938 16.4281 5.52813 16.0031 5.49375 15.225C5.45625 14.3813 5.44688 14.1281 5.44688 11.9938C5.44688 9.85625 5.45625 9.60313 5.49375 8.7625C5.52813 7.98125 5.65938 7.55938 5.76875 7.27813C5.9125 6.90625 6.0875 6.6375 6.36563 6.35938C6.64688 6.07812 6.9125 5.90625 7.28438 5.7625C7.56563 5.65313 7.99063 5.52187 8.76875 5.4875C9.60938 5.45 9.8625 5.44062 12 5.44062ZM12 4C9.82813 4 9.55625 4.00937 8.70313 4.04688C7.85313 4.08438 7.26875 4.22187 6.7625 4.41875C6.23438 4.625 5.7875 4.89688 5.34375 5.34375C4.89688 5.7875 4.625 6.23438 4.41875 6.75938C4.22187 7.26875 4.08438 7.85 4.04688 8.7C4.00938 9.55625 4 9.82812 4 12C4 14.1719 4.00938 14.4438 4.04688 15.2969C4.08438 16.1469 4.22187 16.7313 4.41875 17.2375C4.625 17.7656 4.89688 18.2125 5.34375 18.6562C5.7875 19.1 6.23438 19.375 6.75938 19.5781C7.26875 19.775 7.85 19.9125 8.7 19.95C9.55313 19.9875 9.825 19.9969 11.9969 19.9969C14.1688 19.9969 14.4406 19.9875 15.2938 19.95C16.1438 19.9125 16.7281 19.775 17.2344 19.5781C17.7594 19.375 18.2063 19.1 18.65 18.6562C19.0938 18.2125 19.3688 17.7656 19.5719 17.2406C19.7688 16.7313 19.9063 16.15 19.9438 15.3C19.9813 14.4469 19.9906 14.175 19.9906 12.0031C19.9906 9.83125 19.9813 9.55938 19.9438 8.70625C19.9063 7.85625 19.7688 7.27188 19.5719 6.76562C19.375 6.23438 19.1031 5.7875 18.6563 5.34375C18.2125 4.9 17.7656 4.625 17.2406 4.42188C16.7313 4.225 16.15 4.0875 15.3 4.05C14.4438 4.00938 14.1719 4 12 4Z" fill="#000100"/>
-                                        <path d="M12 7.89062C9.73125 7.89062 7.89062 9.73125 7.89062 12C7.89062 14.2688 9.73125 16.1094 12 16.1094C14.2688 16.1094 16.1094 14.2688 16.1094 12C16.1094 9.73125 14.2688 7.89062 12 7.89062ZM12 14.6656C10.5281 14.6656 9.33437 13.4719 9.33437 12C9.33437 10.5281 10.5281 9.33437 12 9.33437C13.4719 9.33437 14.6656 10.5281 14.6656 12C14.6656 13.4719 13.4719 14.6656 12 14.6656Z" fill="#000100"/>
-                                        <path d="M17.2312 7.72818C17.2312 8.25943 16.8 8.68755 16.2719 8.68755C15.7406 8.68755 15.3125 8.2563 15.3125 7.72818C15.3125 7.19692 15.7438 6.7688 16.2719 6.7688C16.8 6.7688 17.2312 7.20005 17.2312 7.72818Z" fill="#000100"/>
-                                    </g>
-                                    <defs>
-                                        <clipPath id="clip1">
-                                            <rect width="16" height="16" fill="white" transform="translate(4 4)"/>
-                                        </clipPath>
-                                    </defs>
-                                </svg>
-                            </a>
-                            
-                            <!-- X (Twitter) -->
-                            <a href="#" style="display: inline-block; margin: 0 6px; text-decoration: none;">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <rect x="0.5" y="0.5" width="23" height="23" rx="3.5" fill="#BFE2FE"/>
-                                    <rect x="0.5" y="0.5" width="23" height="23" rx="3.5" stroke="white"/>
-                                    <path d="M18 5L7 18M18 18L7 5" stroke="#000" stroke-width="2" stroke-linecap="round"/>
-                                </svg>
-                            </a>
-                            
-                            <!-- Facebook -->
-                            <a href="#" style="display: inline-block; margin: 0 6px; text-decoration: none;">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <rect x="0.5" y="0.5" width="23" height="23" rx="3.5" fill="#BFE2FE"/>
-                                    <rect x="0.5" y="0.5" width="23" height="23" rx="3.5" stroke="white"/>
-                                    <g clip-path="url(#clip2)">
-                                        <path d="M20 12C20 7.58176 16.4182 4 12 4C7.58176 4 4 7.58176 4 12C4 15.7517 6.58304 18.8998 10.0675 19.7645V14.4448H8.41792V12H10.0675V10.9466C10.0675 8.22368 11.2998 6.9616 13.9731 6.9616C14.48 6.9616 15.3546 7.06112 15.7123 7.16032V9.37632C15.5235 9.35648 15.1955 9.34656 14.7882 9.34656C13.4765 9.34656 12.9696 9.84352 12.9696 11.1354V12H15.5827L15.1338 14.4448H12.9696V19.9414C16.9309 19.463 20.0003 16.0902 20.0003 12H20Z" fill="#0866FF"/>
-                                        <path d="M15.1299 14.4447L15.5789 11.9999H12.9657V11.1353C12.9657 9.84347 13.4726 9.34651 14.7843 9.34651C15.1917 9.34651 15.5197 9.35643 15.7085 9.37627V7.16027C15.3507 7.06075 14.4761 6.96155 13.9693 6.96155C11.296 6.96155 10.0637 8.22363 10.0637 10.9465V11.9999H8.41406V14.4447H10.0637V19.7644C10.6825 19.918 11.3299 19.9999 11.9961 19.9999C12.3241 19.9999 12.6477 19.9798 12.9654 19.9414V14.4447H15.1296H15.1299Z" fill="white"/>
-                                    </g>
-                                    <defs>
-                                        <clipPath id="clip2">
-                                            <rect width="16" height="16" fill="white" transform="translate(4 4)"/>
-                                        </clipPath>
-                                    </defs>
-                                </svg>
-                            </a>
-                        </div>
+                        <a href="#" style="display: inline-block; margin: 0 6px; text-decoration: none;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"><rect width="23" height="23" x=".5" y=".5" fill="#BFE2FE" rx="3.5"/><rect width="23" height="23" x=".5" y=".5" stroke="#fff" rx="3.5"/><g clip-path="url(#a_x)"><path fill="#000" d="M16.215 5.27h2.249l-4.913 5.615 5.78 7.642h-4.526l-3.545-4.635-4.056 4.635h-2.25l5.255-6.007-5.545-7.25h4.64l3.205 4.236 3.706-4.237Zm-.79 11.91h1.247L8.628 6.545H7.29l8.136 10.635Z"/></g><defs><clipPath id="a_x"><path fill="#fff" d="M4 4h16v16H4z"/></clipPath></defs></svg>
+                        </a>
                         
-                        <p style="color: #94a3b8; font-size: 12px; margin: 16px 0 0 0;">
-                            © 2025 Original Invoice. All rights reserved.
-                        </p>
-                    </td>
-                </tr>
-            </table>
-        </body>
-        </html>
-        """.formatted(invoiceNumber, clientName, invoiceNumber, clientName, firstName, invoiceNumber, amount, clientName, amount, invoiceNumber, invoiceDate, dueDate, viewInvoiceUrl);
-    }
+                        <a href="#" style="display: inline-block; margin: 0 6px; text-decoration: none;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"><rect width="23" height="23" x=".5" y=".5" fill="#BFE2FE" rx="3.5"/><rect width="23" height="23" x=".5" y=".5" stroke="#fff" rx="3.5"/><g clip-path="url(#a_fb)"><path fill="#0866FF" d="M20 12a8 8 0 1 0-9.932 7.765v-5.32h-1.65V12h1.65v-1.053c0-2.723 1.232-3.985 3.905-3.985.507 0 1.382.1 1.74.198v2.216c-.19-.02-.518-.03-.925-.03-1.312 0-1.818.498-1.818 1.79V12h2.613l-.45 2.445H12.97v5.496A8 8 0 0 0 20 12Z"/><path fill="#fff" d="M15.13 14.445 15.579 12h-2.613v-.865c0-1.292.507-1.788 1.818-1.788.408 0 .736.01.925.03V7.16c-.358-.1-1.233-.198-1.74-.198-2.673 0-3.905 1.262-3.905 3.985V12h-1.65v2.445h1.65v5.32a8.013 8.013 0 0 0 2.901.176v-5.496h2.165Z"/></g><defs><clipPath id="a_fb"><path fill="#fff" d="M4 4h16v16H4z"/></clipPath></defs></svg>
+                        </a>
+                    </div>
+                    
+                    <p style="color: #94a3b8; font-size: 12px; margin: 16px 0 0 0;">
+                        © 2026 Original Invoice. All rights reserved.
+                    </p>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+    """.formatted(invoiceNumber, clientName, firstName, clientName, invoiceNumber, amount, amount, invoiceNumber, invoiceDate, dueDate, viewInvoiceUrl);
+}
 
     @Override
     public void sendPaymentEvidenceNotificationEmail(String toEmail, String senderName, String invoiceNumber, String customerName, String dashboardUrl) {
