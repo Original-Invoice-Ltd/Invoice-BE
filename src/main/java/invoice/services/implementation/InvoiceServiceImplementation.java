@@ -2,7 +2,10 @@ package invoice.services.implementation;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.regex.Matcher;
@@ -707,5 +710,54 @@ public class InvoiceServiceImplementation implements InvoiceService {
         }
         
         return mapToResponse(updatedInvoice, null, sender);
+    }
+
+    @Override
+    public Map<String, Long> getInvoiceStats(String email) {
+        log.info("Fetching invoice statistics for recipient email: {}", email);
+        
+        // Get all invoices sent to this email address
+        List<Invoice> invoices = invoiceRepository.findAllByRecipientEmail(email);
+        
+        // Get current date/time for overdue calculation
+        LocalDateTime now = LocalDateTime.now();
+        
+        // Calculate statistics
+        long totalReceived = invoices.size();
+        
+        long paid = invoices.stream()
+                .filter(invoice -> invoice.getStatus() == Invoice_Status.PAID)
+                .count();
+        
+        long overdue = invoices.stream()
+                .filter(invoice -> 
+                    invoice.getStatus() == Invoice_Status.OVERDUE || 
+                    (invoice.getDueDate() != null && 
+                     invoice.getDueDate().isBefore(now) && 
+                     invoice.getStatus() != Invoice_Status.PAID))
+                .count();
+        
+        long pending = invoices.stream()
+                .filter(invoice -> invoice.getStatus() == Invoice_Status.PENDING)
+                .count();
+        
+        long unpaid = invoices.stream()
+                .filter(invoice -> 
+                    invoice.getStatus() == Invoice_Status.UNPAID || 
+                    invoice.getStatus() == Invoice_Status.OUTSTANDING)
+                .count();
+        
+        // Build response map
+        Map<String, Long> stats = new HashMap<>();
+        stats.put("totalReceived", totalReceived);
+        stats.put("paid", paid);
+        stats.put("overdue", overdue);
+        stats.put("pending", pending);
+        stats.put("unpaid", unpaid);
+        
+        log.info("Invoice stats for recipient {}: Total={}, Paid={}, Overdue={}, Pending={}, Unpaid={}", 
+                email, totalReceived, paid, overdue, pending, unpaid);
+        
+        return stats;
     }
 }

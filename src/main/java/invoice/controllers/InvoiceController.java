@@ -165,4 +165,14 @@ public class InvoiceController {
             return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
         }
     }
+
+    @GetMapping("/stats/received")
+    public ResponseEntity<?> getInvoiceStats(@RequestParam String email) {
+        try {
+            Map<String, Long> stats = invoiceService.getInvoiceStats(email);
+            return ResponseEntity.ok(stats);
+        } catch (OriginalInvoiceBaseException ex) {
+            return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
+        }
+    }
 }
