@@ -12,6 +12,7 @@ public interface InvoiceService {
     InvoiceResponse getInvoiceById(UUID id);
     InvoiceResponse getInvoiceByUuid(UUID uuid); // Public method for customers (no auth required)
     List<InvoiceResponse> getAllUserInvoices();
+    List<InvoiceResponse> getAllUserInvoices(UUID userId);
     InvoiceResponse updateInvoice(UUID id, CreateInvoiceRequest request);
     void deleteInvoice(UUID id);
     InvoiceResponse uploadPaymentEvidence(UUID invoiceUuid, MultipartFile evidenceFile);
