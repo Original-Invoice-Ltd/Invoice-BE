@@ -94,7 +94,7 @@ public class MailgunEmailServiceImpl implements EmailService {
     @Override
     public void sendInvoiceNotificationEmail(String toEmail, String firstName, String invoiceId, String frontendUrl, String invoiceNumber, String invoiceDate, String dueDate, String amount, String clientName) {
         String subject = "Invoice #" + invoiceNumber + " sent to " + clientName;
-        String viewInvoiceUrl = "https://originalinvoice.com/api/invoices/public/" + invoiceId;
+        String viewInvoiceUrl = "https://originalinvoice.com/customer/invoice/" + invoiceId;
         String htmlContent = buildInvoiceNotificationEmailBody(firstName, viewInvoiceUrl, invoiceNumber, invoiceDate, dueDate, amount, clientName);
 
         try {
@@ -109,7 +109,7 @@ public class MailgunEmailServiceImpl implements EmailService {
     @Override
     public void sendInvoiceNotificationEmail(String toEmail, String firstName, String invoiceId, String frontendUrl) {
         String subject = "Your New Invoice is Ready";
-        String viewInvoiceUrl = "https://originalinvoice.com/api/invoices/public/" + invoiceId;
+        String viewInvoiceUrl = "https://originalinvoice.com/customer/invoice/" + invoiceId;
         String htmlContent = buildInvoiceNotificationEmailBody(firstName, viewInvoiceUrl);
 
         try {
