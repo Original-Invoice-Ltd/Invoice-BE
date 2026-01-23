@@ -94,7 +94,7 @@ public class MailgunEmailServiceImpl implements EmailService {
     @Override
     public void sendInvoiceNotificationEmail(String toEmail, String firstName, String invoiceId, String frontendUrl, String invoiceNumber, String invoiceDate, String dueDate, String amount, String clientName) {
         String subject = "Invoice #" + invoiceNumber + " sent to " + clientName;
-        String viewInvoiceUrl = "https://originalinvoice.com/customer/invoice/" + invoiceId;
+        String viewInvoiceUrl = "https://originalinvoice.com/api/invoices/public/" + invoiceId;
         String htmlContent = buildInvoiceNotificationEmailBody(firstName, viewInvoiceUrl, invoiceNumber, invoiceDate, dueDate, amount, clientName);
 
         try {
@@ -109,7 +109,7 @@ public class MailgunEmailServiceImpl implements EmailService {
     @Override
     public void sendInvoiceNotificationEmail(String toEmail, String firstName, String invoiceId, String frontendUrl) {
         String subject = "Your New Invoice is Ready";
-        String viewInvoiceUrl = "https://originalinvoice.com/customer/invoice/" + invoiceId;
+        String viewInvoiceUrl = "https://originalinvoice.com/api/invoices/public/" + invoiceId;
         String htmlContent = buildInvoiceNotificationEmailBody(firstName, viewInvoiceUrl);
 
         try {
@@ -764,7 +764,7 @@ public class MailgunEmailServiceImpl implements EmailService {
                         </a>
                         
                         <a href="#" style="display: inline-block; margin: 0 6px; text-decoration: none;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"><rect width="23" height="23" x=".5" y=".5" fill="#BFE2FE" rx="3.5"/><rect width="23" height="23" x=".5" y=".5" stroke="#fff" rx="3.5"/><g clip-path="url(#a_fb)"><path fill="#0866FF" d="M20 12a8 8 0 1 0-9.932 7.765v-5.32h-1.65V12h1.65v-1.053c0-2.723 1.232-3.985 3.905-3.985.507 0 1.382.1 1.74.198v2.216c-.19-.02-.518-.03-.925-.03-1.312 0-1.818.498-1.818 1.79V12h2.613l-.45 2.445H12.97v5.496A8 8 0 0 0 20 12Z"/><path fill="#fff" d="M15.13 14.445 15.579 12h-2.613v-.865c0-1.292.507-1.788 1.818-1.788.408 0 .736.01.925.03V7.16c-.358-.1-1.233-.198-1.74-.198-2.673 0-3.905 1.262-3.905 3.985V12h-1.65v2.445h1.65v5.32a8.013 8.013 0 0 0 2.901.176v-5.496h2.165Z"/></g><defs><clipPath id="a_fb"><path fill="#fff" d="M4 4h16v16H4z"/></clipPath></defs></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none"><rect width="23" height="23" x=".5" y=".5" fill="#BFE2FE" rx="3.5"/><rect width="23" height="23" x=".5" y=".5" stroke="#fff" rx="3.5"/><g clip-path="url(#a_fb)"><path fill="#0866FF" d="M20 12a8 8 0 1 0-9.932 7.765v-5.32h-1.65V12h1.65v-1.053c0-2.723 1.232-3.985 3.905-3.985.507 0 1.382.1 1.74.198v2.216c-.19-.02-.518-.03-.925-.03-1.312 0-1.818.498-1.818 1.79V12h2.613l-.45 2.445H12.97v5.496A8 8 0 0 0 20 12Z"/><path fill="#fff" d="M15.13 14.445 15.579 12h-2.613v-.865c0-1.292.507-1.788 1.818-1.788.408 0 .736.01.925.03V7.16c-.358-.1-1.233-.198-1.74-.198-2.673 0-3.905 1.262-3.905 3.985V12h-1.65v2.445h1.65v5.32a8.013 8.013 0 0 0 2.901.176v-5.496h2.165Z"/></g><defs><clipPath id="a_fb"><path fill="#fff" d="M4 4h16v16H4z"/></clipPath></defs></svg>
                         </a>
                     </div>
                     
