@@ -63,6 +63,7 @@ public class MailgunEmailServiceImpl implements EmailService {
         }
     }
 
+
     @Override
     public void sendOTPEmail(String toEmail, String firstName, String otp) {
         String subject = "Your Verification Code";
@@ -76,6 +77,7 @@ public class MailgunEmailServiceImpl implements EmailService {
             throw new RuntimeException("Failed to send OTP email", e);
         }
     }
+
 
     @Override
     public void sendPasswordResetOTPEmail(String toEmail, String firstName, String otp) {
@@ -843,7 +845,7 @@ public class MailgunEmailServiceImpl implements EmailService {
                         
                         <!-- CTA Button -->
                         <div style="text-align: center; margin: 32px 0;">
-                            <a href="%s" style="background: linear-gradient(135deg, #22c55e 0%%, #16a34a 100%%); color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);">
+                            <a href="https://api.originalinvoice.com/dashboard/payment" style="background: linear-gradient(135deg, #22c55e 0%%, #16a34a 100%%); color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);">
                                 Review Payment Evidence
                             </a>
                         </div>
@@ -885,6 +887,6 @@ public class MailgunEmailServiceImpl implements EmailService {
             </table>
         </body>
         </html>
-        """.formatted(invoiceNumber, senderName, customerName, invoiceNumber, invoiceNumber, customerName, dashboardUrl);
+        """.formatted(invoiceNumber, senderName, customerName, invoiceNumber, invoiceNumber, customerName);
     }
 }

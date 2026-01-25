@@ -760,4 +760,46 @@ public class InvoiceServiceImplementation implements InvoiceService {
         
         return stats;
     }
+
+    @Override
+    @Transactional
+    public InvoiceResponse markInvoiceAsPaid(UUID invoiceId) {
+        log.info("Marking invoice as paid: {}", invoiceId);
+        
+        // Find the invoice by ID
+        Invoice invoice = invoiceRepository.findById(invoiceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Invoice not found with ID: " + invoiceId));
+        
+        // Update status to PAID
+        invoice.setStatus(Invoice_Status.PAID);
+        
+        // Save the updated invoice
+        Invoice updatedInvoice = invoiceRepository.save(invoice);
+        
+        log.info("Invoice {} marked as paid successfully", invoiceId);
+        
+        // Create notification for invoice paid
+        try {
+            User invoiceOwner = invoice.getUser();
+            String recipientName = invoice.getRecipient() != null ? 
+                invoice.getRecipient().getFullName() : "Customer";
+            
+            notificationService.createNotification(
+                invoiceOwner,
+                "Invoice Paid",
+                "Invoice " + invoice.getInvoiceNumber() + " from " + recipientName + " has been marked as paid",
+                NotificationType.PAYMENT_RECEIVED,
+                invoice.getId(),
+                "INVOICE"
+            );
+        } catch (Exception e) {
+            log.warn("Failed to create invoice paid notification: {}", e.getMessage());
+        }
+        
+        // Get sender for response mapping
+        InvoiceSender sender = invoiceSenderRepository.findByInvoice(updatedInvoice.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Sender not found"));
+        
+        return mapToResponse(updatedInvoice, null, sender);
+    }
 }

@@ -175,4 +175,14 @@ public class InvoiceController {
             return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
         }
     }
+
+    @PatchMapping("/{id}/mark-as-paid")
+    public ResponseEntity<?> markInvoiceAsPaid(Principal principal, @PathVariable UUID id) {
+        try {
+            InvoiceResponse response = invoiceService.markInvoiceAsPaid(id);
+            return ResponseEntity.ok(response);
+        } catch (OriginalInvoiceBaseException ex) {
+            return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
+        }
+    }
 }
