@@ -893,7 +893,7 @@ public class MailgunEmailServiceImpl implements EmailService {
     @Override
     public void sendPaymentReceiptEmail(String toEmail, String customerName, String receiptNumber, String receiptDate, String invoiceNumber, String invoiceIssueDate, String itemsJson, String subtotal, String vat, String totalAmount, String paymentMethod, String paymentDate, String confirmedBy) {
         String subject = "Payment Receipt - " + receiptNumber;
-        String htmlContent = buildPaymentReceiptEmailBody(customerName, receiptNumber, receiptDate, invoiceNumber, invoiceIssueDate, itemsJson, subtotal, vat, totalAmount, paymentMethod, paymentDate, confirmedBy);
+        String htmlContent = buildPaymentReceiptEmailBody(customerName, toEmail, receiptNumber, receiptDate, invoiceNumber, invoiceIssueDate, itemsJson, subtotal, vat, totalAmount, paymentMethod, paymentDate, confirmedBy);
 
         try {
             sendEmailInternal(customerName, toEmail, subject, htmlContent);
@@ -904,7 +904,7 @@ public class MailgunEmailServiceImpl implements EmailService {
         }
     }
 
-    private String buildPaymentReceiptEmailBody(String customerName, String receiptNumber, String receiptDate, String invoiceNumber, String invoiceIssueDate, String itemsJson, String subtotal, String vat, String totalAmount, String paymentMethod, String paymentDate, String confirmedBy) {
+    private String buildPaymentReceiptEmailBody(String customerName, String customerEmail, String receiptNumber, String receiptDate, String invoiceNumber, String invoiceIssueDate, String itemsJson, String subtotal, String vat, String totalAmount, String paymentMethod, String paymentDate, String confirmedBy) {
         return """
         <!DOCTYPE html>
         <html>
@@ -1063,7 +1063,7 @@ public class MailgunEmailServiceImpl implements EmailService {
         """.formatted(
             receiptNumber, invoiceNumber,
             receiptDate, invoiceIssueDate,
-            customerName, toEmail,
+            customerName, customerEmail,
             itemsJson,
             subtotal, vat, totalAmount,
             paymentMethod, paymentDate, confirmedBy,
