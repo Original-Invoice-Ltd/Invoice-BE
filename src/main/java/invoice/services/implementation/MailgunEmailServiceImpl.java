@@ -889,4 +889,185 @@ public class MailgunEmailServiceImpl implements EmailService {
         </html>
         """.formatted(invoiceNumber, senderName, customerName, invoiceNumber, invoiceNumber, customerName);
     }
+
+    @Override
+    public void sendPaymentReceiptEmail(String toEmail, String customerName, String receiptNumber, String receiptDate, String invoiceNumber, String invoiceIssueDate, String itemsJson, String subtotal, String vat, String totalAmount, String paymentMethod, String paymentDate, String confirmedBy) {
+        String subject = "Payment Receipt - " + receiptNumber;
+        String htmlContent = buildPaymentReceiptEmailBody(customerName, receiptNumber, receiptDate, invoiceNumber, invoiceIssueDate, itemsJson, subtotal, vat, totalAmount, paymentMethod, paymentDate, confirmedBy);
+
+        try {
+            sendEmailInternal(customerName, toEmail, subject, htmlContent);
+            log.info("Payment receipt email sent successfully to {}", toEmail);
+        } catch (Exception e) {
+            log.error("Failed to send payment receipt email to {}: {}", toEmail, e.getMessage(), e);
+            throw new RuntimeException("Failed to send payment receipt email", e);
+        }
+    }
+
+    private String buildPaymentReceiptEmailBody(String customerName, String receiptNumber, String receiptDate, String invoiceNumber, String invoiceIssueDate, String itemsJson, String subtotal, String vat, String totalAmount, String paymentMethod, String paymentDate, String confirmedBy) {
+        return """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Payment Receipt</title>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5; padding: 40px 20px;">
+            <table cellpadding="0" cellspacing="0" border="0" width="100%%" style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                
+                <!-- Header -->
+                <tr>
+                    <td style="padding: 40px 40px 20px 40px; text-align: center; border-bottom: 2px dashed #e0e0e0;">
+                        <h1 style="color: #2c3e50; margin: 0 0 20px 0; font-size: 28px; font-weight: 700;">Payment Receipt</h1>
+                    </td>
+                </tr>
+                
+                <!-- Logo Section -->
+                <tr>
+                    <td style="padding: 30px 40px; text-align: center; background-color: #f8f9fa;">
+                        <div style="background-color: #e3f2fd; padding: 20px; border-radius: 8px; display: inline-block;">
+                            <span style="color: #1976d2; font-size: 24px; font-weight: 700; letter-spacing: 2px;">LOGO</span>
+                        </div>
+                    </td>
+                </tr>
+                
+                <!-- Receipt Details -->
+                <tr>
+                    <td style="padding: 30px 40px;">
+                        <table cellpadding="0" cellspacing="0" border="0" width="100%%">
+                            <tr>
+                                <td style="width: 50%%; padding-bottom: 15px;">
+                                    <p style="color: #7f8c8d; font-size: 13px; margin: 0 0 5px 0;">Receipt Number:</p>
+                                    <p style="color: #2c3e50; font-size: 15px; font-weight: 600; margin: 0;">%s</p>
+                                </td>
+                                <td style="width: 50%%; padding-bottom: 15px; text-align: right;">
+                                    <p style="color: #7f8c8d; font-size: 13px; margin: 0 0 5px 0;">Invoice Number:</p>
+                                    <p style="color: #2c3e50; font-size: 15px; font-weight: 600; margin: 0;">%s</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="width: 50%%; padding-bottom: 15px;">
+                                    <p style="color: #7f8c8d; font-size: 13px; margin: 0 0 5px 0;">Receipt Date:</p>
+                                    <p style="color: #2c3e50; font-size: 15px; font-weight: 600; margin: 0;">%s</p>
+                                </td>
+                                <td style="width: 50%%; padding-bottom: 15px; text-align: right;">
+                                    <p style="color: #7f8c8d; font-size: 13px; margin: 0 0 5px 0;">Invoice Issue Date:</p>
+                                    <p style="color: #2c3e50; font-size: 15px; font-weight: 600; margin: 0;">%s</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                
+                <!-- Customer Information -->
+                <tr>
+                    <td style="padding: 0 40px 30px 40px;">
+                        <h3 style="color: #2c3e50; font-size: 16px; font-weight: 700; margin: 0 0 15px 0;">Customer Information</h3>
+                        <p style="color: #2c3e50; font-size: 15px; font-weight: 600; margin: 0 0 5px 0;">%s</p>
+                        <p style="color: #7f8c8d; font-size: 14px; margin: 0;">%s</p>
+                    </td>
+                </tr>
+                
+                <!-- Items Table -->
+                <tr>
+                    <td style="padding: 0 40px 30px 40px;">
+                        <table cellpadding="0" cellspacing="0" border="0" width="100%%" style="border-collapse: collapse;">
+                            <thead>
+                                <tr style="background-color: #f8f9fa;">
+                                    <th style="padding: 12px; text-align: left; color: #7f8c8d; font-size: 13px; font-weight: 600; border-bottom: 2px solid #e0e0e0;">#</th>
+                                    <th style="padding: 12px; text-align: left; color: #7f8c8d; font-size: 13px; font-weight: 600; border-bottom: 2px solid #e0e0e0;">Item Detail</th>
+                                    <th style="padding: 12px; text-align: center; color: #7f8c8d; font-size: 13px; font-weight: 600; border-bottom: 2px solid #e0e0e0;">Qty</th>
+                                    <th style="padding: 12px; text-align: right; color: #7f8c8d; font-size: 13px; font-weight: 600; border-bottom: 2px solid #e0e0e0;">Rate</th>
+                                    <th style="padding: 12px; text-align: right; color: #7f8c8d; font-size: 13px; font-weight: 600; border-bottom: 2px solid #e0e0e0;">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                %s
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
+                
+                <!-- Payment Summary -->
+                <tr>
+                    <td style="padding: 0 40px 30px 40px;">
+                        <h3 style="color: #2c3e50; font-size: 16px; font-weight: 700; margin: 0 0 15px 0;">Payment Summary</h3>
+                        <table cellpadding="0" cellspacing="0" border="0" width="100%%">
+                            <tr>
+                                <td style="padding: 8px 0; color: #7f8c8d; font-size: 14px;">Sub Total</td>
+                                <td style="padding: 8px 0; text-align: right; color: #2c3e50; font-size: 14px; font-weight: 600;">%s</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 0; color: #7f8c8d; font-size: 14px;">VAT (7.5%%)</td>
+                                <td style="padding: 8px 0; text-align: right; color: #2c3e50; font-size: 14px; font-weight: 600;">%s</td>
+                            </tr>
+                            <tr style="border-top: 2px solid #e0e0e0;">
+                                <td style="padding: 12px 0; color: #2c3e50; font-size: 16px; font-weight: 700;">Total Amount Paid</td>
+                                <td style="padding: 12px 0; text-align: right; color: #27ae60; font-size: 18px; font-weight: 700;">%s</td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                
+                <!-- Payment Confirmation -->
+                <tr>
+                    <td style="padding: 0 40px 30px 40px;">
+                        <h3 style="color: #2c3e50; font-size: 16px; font-weight: 700; margin: 0 0 15px 0;">Payment Confirmation</h3>
+                        <table cellpadding="0" cellspacing="0" border="0" width="100%%">
+                            <tr>
+                                <td style="padding: 8px 0; color: #7f8c8d; font-size: 14px;">Payment Method</td>
+                                <td style="padding: 8px 0; text-align: right; color: #2c3e50; font-size: 14px; font-weight: 600;">%s</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 0; color: #7f8c8d; font-size: 14px;">Payment Date</td>
+                                <td style="padding: 8px 0; text-align: right; color: #2c3e50; font-size: 14px; font-weight: 600;">%s</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 0; color: #7f8c8d; font-size: 14px;">Confirmed By</td>
+                                <td style="padding: 8px 0; text-align: right; color: #2c3e50; font-size: 14px; font-weight: 600;">%s</td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                
+                <!-- QR Code Placeholder -->
+                <tr>
+                    <td style="padding: 20px 40px; text-align: center; background-color: #f8f9fa;">
+                        <div style="background-color: white; padding: 15px; border-radius: 8px; display: inline-block; border: 2px solid #e0e0e0;">
+                            <div style="width: 120px; height: 120px; background-color: #f0f0f0; display: flex; align-items: center; justify-content: center;">
+                                <span style="color: #95a5a6; font-size: 12px;">QR Code</span>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                
+                <!-- Footer -->
+                <tr>
+                    <td style="padding: 30px 40px; text-align: center; background-color: #f8f9fa;">
+                        <p style="color: #7f8c8d; font-size: 13px; margin: 0 0 10px 0;">
+                            This receipt was autogenerated by <span style="color: #3498db; font-weight: 600;">Original Invoice</span>.
+                        </p>
+                        <p style="color: #7f8c8d; font-size: 13px; margin: 0 0 20px 0;">
+                            This document serves as proof of payment.
+                        </p>
+                        <a href="https://api.originalinvoice.com/receipts/%s/download" style="display: inline-block; background-color: #3498db; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600;">
+                            📄 Download PDF
+                        </a>
+                    </td>
+                </tr>
+                
+            </table>
+        </body>
+        </html>
+        """.formatted(
+            receiptNumber, invoiceNumber,
+            receiptDate, invoiceIssueDate,
+            customerName, toEmail,
+            itemsJson,
+            subtotal, vat, totalAmount,
+            paymentMethod, paymentDate, confirmedBy,
+            receiptNumber
+        );
+    }
 }
