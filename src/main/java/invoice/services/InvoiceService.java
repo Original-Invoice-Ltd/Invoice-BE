@@ -18,6 +18,7 @@ public interface InvoiceService {
     void deleteInvoice(UUID id);
     InvoiceResponse uploadPaymentEvidence(UUID invoiceUuid, MultipartFile evidenceFile);
     Map<String, Long> getInvoiceStats(String email);
+    InvoiceResponse markInvoiceAsPaid(UUID invoiceId);
 
     List<InvoiceResponse> getAllInvoices();
 }
