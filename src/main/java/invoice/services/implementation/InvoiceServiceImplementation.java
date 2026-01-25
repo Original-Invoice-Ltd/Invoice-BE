@@ -18,6 +18,7 @@ import invoice.dtos.response.ClientResponse;
 import invoice.dtos.response.InvoiceItemResponse;
 import invoice.dtos.response.InvoiceResponse;
 import invoice.dtos.response.InvoiceSenderResponse;
+import invoice.dtos.response.ReceiptResponse;
 import invoice.exception.ResourceNotFoundException;
 import invoice.data.constants.Item_Category;
 import invoice.data.constants.Invoice_Status;
@@ -53,6 +54,8 @@ public class InvoiceServiceImplementation implements InvoiceService {
     private final InvoiceSenderRepository invoiceSenderRepository;
     private final EmailService emailService;
     private final NotificationService notificationService;
+    private final ReceiptRepository receiptRepository;
+    private final ReceiptSequenceRepository receiptSequenceRepository;
 
 
     @Override
@@ -759,5 +762,140 @@ public class InvoiceServiceImplementation implements InvoiceService {
                 email, totalReceived, paid, overdue, pending, unpaid);
         
         return stats;
+    }
+
+    @Override
+    @Transactional
+    public ReceiptResponse markInvoiceAsPaid(UUID invoiceId, String paymentMethod) {
+        log.info("Marking invoice as paid: {}", invoiceId);
+        
+        // 1. Fetch the Invoice
+        Invoice invoice = invoiceRepository.findById(invoiceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Invoice not found with ID: " + invoiceId));
+        
+        // 2. Update Invoice status to PAID
+        invoice.setStatus(Invoice_Status.PAID);
+        Invoice updatedInvoice = invoiceRepository.save(invoice);
+        
+        log.info("Invoice {} marked as paid successfully", invoiceId);
+        
+        // 3. Map Data: Create Receipt record
+        Receipt receipt = new Receipt();
+        receipt.setReceiptNumber(generateReceiptNumber());
+        receipt.setInvoice(updatedInvoice);
+        receipt.setPaymentDate(LocalDateTime.now());
+        receipt.setPaymentMethod(paymentMethod != null ? paymentMethod : "Bank Transfer");
+        receipt.setTotalPaid(BigDecimal.valueOf(invoice.getTotalDue() != null ? invoice.getTotalDue() : 0.0));
+        
+        // 4. Save Receipt to database
+        Receipt savedReceipt = receiptRepository.save(receipt);
+        log.info("Receipt {} created for invoice {}", savedReceipt.getReceiptNumber(), invoiceId);
+        
+        // 5. Send receipt email to customer (reusing existing email service)
+        InvoiceRecipient recipient = invoice.getRecipient();
+        String recipientName = recipient != null ? recipient.getFullName() : "Customer";
+        String recipientEmail = recipient != null ? recipient.getEmail() : null;
+        
+        if (recipientEmail != null) {
+            String receiptDate = savedReceipt.getPaymentDate().format(java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy"));
+            String invoiceIssueDate = invoice.getCreationDate() != null ? 
+                invoice.getCreationDate().format(java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy")) : receiptDate;
+            
+            // Build items HTML for email template
+            StringBuilder itemsHtml = new StringBuilder();
+            int itemNumber = 1;
+            for (InvoiceItem item : invoice.getItems()) {
+                itemsHtml.append(String.format(
+                    "<tr><td style='padding: 12px; border-bottom: 1px solid #f0f0f0; color: #2c3e50; font-size: 14px;'>%d</td>" +
+                    "<td style='padding: 12px; border-bottom: 1px solid #f0f0f0; color: #2c3e50; font-size: 14px;'>%s</td>" +
+                    "<td style='padding: 12px; border-bottom: 1px solid #f0f0f0; text-align: center; color: #2c3e50; font-size: 14px;'>%d</td>" +
+                    "<td style='padding: 12px; border-bottom: 1px solid #f0f0f0; text-align: right; color: #2c3e50; font-size: 14px;'>%s</td>" +
+                    "<td style='padding: 12px; border-bottom: 1px solid #f0f0f0; text-align: right; color: #2c3e50; font-size: 14px; font-weight: 600;'>%s</td></tr>",
+                    itemNumber++,
+                    item.getItemName(),
+                    item.getQuantity(),
+                    String.format("%.0f", item.getRate().doubleValue()),
+                    String.format("N%,.0f", item.getAmount().doubleValue())
+                ));
+            }
+            
+            String subtotal = String.format("%,.0f", invoice.getSubtotal() != null ? invoice.getSubtotal() : 0.0);
+            String vat = String.format("%,.0f", invoice.getTotalTaxAmount() != null ? invoice.getTotalTaxAmount() : 0.0);
+            String totalAmount = String.format("N%,.0f", invoice.getTotalDue() != null ? invoice.getTotalDue() : 0.0);
+            
+            try {
+                emailService.sendPaymentReceiptEmail(
+                    recipientEmail,
+                    recipientName,
+                    savedReceipt.getReceiptNumber(),
+                    receiptDate,
+                    invoice.getInvoiceNumber(),
+                    invoiceIssueDate,
+                    itemsHtml.toString(),
+                    subtotal,
+                    vat,
+                    totalAmount,
+                    savedReceipt.getPaymentMethod(),
+                    receiptDate,
+                    invoice.getUser().getFullName()
+                );
+                log.info("Payment receipt email sent to customer: {}", recipientEmail);
+            } catch (Exception e) {
+                log.error("Failed to send payment receipt email: {}", e.getMessage(), e);
+            }
+        }
+        
+        // 6. Send real-time notification to invoice owner (reusing existing notification service)
+        try {
+            notificationService.createNotification(
+                invoice.getUser(),
+                "Invoice Paid",
+                "Invoice " + invoice.getInvoiceNumber() + " from " + recipientName + " has been marked as paid. Receipt " + savedReceipt.getReceiptNumber() + " generated.",
+                NotificationType.PAYMENT_RECEIVED,
+                invoice.getId(),
+                "INVOICE"
+            );
+        } catch (Exception e) {
+            log.warn("Failed to create invoice paid notification: {}", e.getMessage());
+        }
+        
+        // 7. Send real-time notification to customer if they are a registered user (reusing existing notification service)
+        if (recipientEmail != null) {
+            try {
+                userRepository.findByEmail(recipientEmail).ifPresent(recipientUser -> {
+                    try {
+                        notificationService.createNotification(
+                            recipientUser,
+                            "Payment Receipt Generated",
+                            "Your payment for Invoice " + invoice.getInvoiceNumber() + " has been confirmed. Receipt " + savedReceipt.getReceiptNumber() + " has been generated and sent to your email.",
+                            NotificationType.PAYMENT_RECEIVED,
+                            invoice.getId(),
+                            "RECEIPT"
+                        );
+                        log.info("Notification created for registered recipient user: {}", recipientEmail);
+                    } catch (Exception e) {
+                        log.warn("Failed to create notification for recipient user: {}", e.getMessage());
+                    }
+                });
+            } catch (Exception e) {
+                log.warn("Failed to check for recipient user account: {}", e.getMessage());
+            }
+        }
+        
+        return new ReceiptResponse(savedReceipt);
+    }
+    
+    private String generateReceiptNumber() {
+        ReceiptSequence sequence = receiptSequenceRepository.findGlobalSequenceForUpdate()
+                .orElseGet(() -> {
+                    ReceiptSequence newSequence = new ReceiptSequence(0);
+                    return receiptSequenceRepository.save(newSequence);
+                });
+        
+        int nextNumber = sequence.getLastSequenceNumber() + 1;
+        sequence.setLastSequenceNumber(nextNumber);
+        receiptSequenceRepository.save(sequence);
+        
+        return "RCT-" + String.format("%06d", nextNumber);
     }
 }
