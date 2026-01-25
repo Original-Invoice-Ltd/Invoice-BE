@@ -2,6 +2,7 @@ package invoice.controllers;
 
 import invoice.dtos.request.CreateInvoiceRequest;
 import invoice.dtos.response.InvoiceResponse;
+import invoice.dtos.response.ReceiptResponse;
 import invoice.exception.OriginalInvoiceBaseException;
 import invoice.services.InvoiceService;
 import lombok.AllArgsConstructor;
@@ -177,9 +178,13 @@ public class InvoiceController {
     }
 
     @PatchMapping("/{id}/mark-as-paid")
-    public ResponseEntity<?> markInvoiceAsPaid(Principal principal, @PathVariable UUID id) {
+    public ResponseEntity<?> markInvoiceAsPaid(
+            Principal principal, 
+            @PathVariable UUID id,
+            @RequestBody(required = false) Map<String, String> requestBody) {
         try {
-            InvoiceResponse response = invoiceService.markInvoiceAsPaid(id);
+            String paymentMethod = requestBody != null ? requestBody.get("paymentMethod") : "Bank Transfer";
+            ReceiptResponse response = invoiceService.markInvoiceAsPaid(id, paymentMethod);
             return ResponseEntity.ok(response);
         } catch (OriginalInvoiceBaseException ex) {
             return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
