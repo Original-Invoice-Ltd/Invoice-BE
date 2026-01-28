@@ -800,6 +800,24 @@ public class PaystackSubscriptionService {
     }
     
     /**
+     * Safely extract text value from JsonNode
+     */
+    private String safeGetText(JsonNode node, String fieldName) {
+        if (node == null) return null;
+        JsonNode fieldNode = node.get(fieldName);
+        return (fieldNode != null && !fieldNode.isNull()) ? fieldNode.asText() : null;
+    }
+    
+    /**
+     * Safely extract boolean value from JsonNode
+     */
+    private boolean safeGetBoolean(JsonNode node, String fieldName) {
+        if (node == null) return false;
+        JsonNode fieldNode = node.get(fieldName);
+        return (fieldNode != null && fieldNode.isBoolean()) ? fieldNode.asBoolean() : false;
+    }
+    
+    /**
      * Verify transaction and update subscription status
      */
     public Map<String, Object> verifyTransactionAndUpdateSubscription(User user, String reference) {
@@ -823,54 +841,72 @@ public class PaystackSubscriptionService {
             if (response.getStatusCode() == HttpStatus.OK) {
                 JsonNode jsonResponse = objectMapper.readTree(response.getBody());
                 
-                if (jsonResponse.get("status").asBoolean()) {
+                // Log the response for debugging
+                log.info("Paystack verification response: {}", jsonResponse.toString());
+                
+                // Check if status exists and is boolean
+                if (safeGetBoolean(jsonResponse, "status")) {
                     JsonNode data = jsonResponse.get("data");
-                    String status = data.get("status").asText();
-                    
-                    if ("success".equals(status)) {
-                        // Check if this transaction has a plan (subscription)
-                        JsonNode planNode = data.get("plan");
-                        if (planNode != null && !planNode.isNull()) {
-                            String planCode = planNode.get("plan_code").asText();
-                            
-                            // Determine which plan this is
-                            Subscription.SubscriptionPlan plan = getPlanFromCode(planCode);
-                            if (plan != null) {
-                                // Update or create subscription
-                                Subscription subscription = subscriptionRepository.findByUser(user)
-                                    .orElse(new Subscription());
-                                
-                                subscription.setUser(user);
-                                subscription.setPlan(plan);
-                                subscription.setStatus(Subscription.SubscriptionStatus.ACTIVE);
-                                subscription.setCurrentPeriodStart(LocalDateTime.now());
-                                subscription.setCurrentPeriodEnd(LocalDateTime.now().plusMonths(1));
-                                subscription.setLastResetDate(LocalDateTime.now());
-                                subscription.setInvoicesUsedThisMonth(0);
-                                subscription.setLogosUploadedThisMonth(0);
-                                
-                                subscriptionRepository.save(subscription);
-                                
-                                Map<String, Object> result = new HashMap<>();
-                                result.put("success", true);
-                                result.put("message", "Subscription activated successfully");
-                                result.put("plan", plan.name());
-                                result.put("planDisplayName", plan.getDisplayName());
-                                return result;
-                            }
-                        }
+                    if (data != null && !data.isNull()) {
+                        String status = safeGetText(data, "status");
                         
-                        // If no plan found, still return success for regular transaction
-                        Map<String, Object> result = new HashMap<>();
-                        result.put("success", true);
-                        result.put("message", "Transaction verified successfully");
-                        return result;
+                        if ("success".equals(status)) {
+                            // Check if this transaction has a plan (subscription)
+                            JsonNode planNode = data.get("plan");
+                            if (planNode != null && !planNode.isNull()) {
+                                String planCode = safeGetText(planNode, "plan_code");
+                                if (planCode != null && !planCode.isEmpty()) {
+                                    
+                                    // Determine which plan this is
+                                    Subscription.SubscriptionPlan plan = getPlanFromCode(planCode);
+                                    if (plan != null) {
+                                        // Update or create subscription
+                                        Subscription subscription = subscriptionRepository.findByUser(user)
+                                            .orElse(new Subscription());
+                                        
+                                        subscription.setUser(user);
+                                        subscription.setPlan(plan);
+                                        subscription.setStatus(Subscription.SubscriptionStatus.ACTIVE);
+                                        subscription.setCurrentPeriodStart(LocalDateTime.now());
+                                        subscription.setCurrentPeriodEnd(LocalDateTime.now().plusMonths(1));
+                                        subscription.setLastResetDate(LocalDateTime.now());
+                                        subscription.setInvoicesUsedThisMonth(0);
+                                        subscription.setLogosUploadedThisMonth(0);
+                                        
+                                        subscriptionRepository.save(subscription);
+                                        
+                                        Map<String, Object> result = new HashMap<>();
+                                        result.put("success", true);
+                                        result.put("message", "Subscription activated successfully");
+                                        result.put("plan", plan.name());
+                                        result.put("planDisplayName", plan.getDisplayName());
+                                        return result;
+                                    }
+                                }
+                            }
+                            
+                            // If no plan found, still return success for regular transaction
+                            Map<String, Object> result = new HashMap<>();
+                            result.put("success", true);
+                            result.put("message", "Transaction verified successfully");
+                            return result;
+                        } else {
+                            Map<String, Object> errorResult = new HashMap<>();
+                            errorResult.put("success", false);
+                            errorResult.put("message", "Transaction was not successful: " + status);
+                            return errorResult;
+                        }
                     } else {
                         Map<String, Object> errorResult = new HashMap<>();
                         errorResult.put("success", false);
-                        errorResult.put("message", "Transaction was not successful: " + status);
+                        errorResult.put("message", "Transaction data is missing in response");
                         return errorResult;
                     }
+                } else {
+                    Map<String, Object> errorResult = new HashMap<>();
+                    errorResult.put("success", false);
+                    errorResult.put("message", "Invalid response status from Paystack");
+                    return errorResult;
                 }
             }
             
@@ -880,10 +916,10 @@ public class PaystackSubscriptionService {
             return errorResult;
             
         } catch (Exception e) {
-            log.error("Error verifying transaction", e);
+            log.error("Error verifying transaction with reference: {}", reference, e);
             Map<String, Object> errorResult = new HashMap<>();
             errorResult.put("success", false);
-            errorResult.put("message", e.getMessage());
+            errorResult.put("message", "Failed to verify transaction: " + e.getMessage());
             return errorResult;
         }
     }
