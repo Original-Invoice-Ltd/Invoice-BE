@@ -2,6 +2,7 @@ package invoice.controllers;
 
 import invoice.dtos.request.CreateInvoiceRequest;
 import invoice.dtos.response.InvoiceResponse;
+import invoice.dtos.response.ReceiptResponse;
 import invoice.exception.OriginalInvoiceBaseException;
 import invoice.services.InvoiceService;
 import invoice.services.PaystackSubscriptionService;
@@ -191,25 +192,17 @@ public class InvoiceController {
         }
     }
 
-    @GetMapping("/can-create")
-    public ResponseEntity<?> canCreateInvoice(Principal principal) {
+    @PatchMapping("/{id}/mark-as-paid")
+    public ResponseEntity<?> markInvoiceAsPaid(
+            Principal principal, 
+            @PathVariable UUID id,
+            @RequestBody(required = false) Map<String, String> requestBody) {
         try {
-            if (principal == null) {
-                return new ResponseEntity<>("No authentication found", HttpStatus.UNAUTHORIZED);
-            }
-            
-            User user = userService.findByEmail(principal.getName());
-            boolean canCreate = subscriptionService.canCreateInvoice(user);
-            
-            Map<String, Object> response = Map.of(
-                "canCreate", canCreate,
-                "message", canCreate ? "You can create invoices" : "Invoice limit reached for your current plan"
-            );
-            
+            String paymentMethod = requestBody != null ? requestBody.get("paymentMethod") : "Bank Transfer";
+            ReceiptResponse response = invoiceService.markInvoiceAsPaid(id, paymentMethod);
             return ResponseEntity.ok(response);
-        } catch (Exception ex) {
-            return new ResponseEntity<>("Error checking invoice creation permission: " + ex.getMessage(), 
-                HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (OriginalInvoiceBaseException ex) {
+            return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
         }
     }
 }

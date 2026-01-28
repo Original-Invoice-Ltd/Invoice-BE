@@ -2,6 +2,7 @@ package invoice.services;
 
 import invoice.dtos.request.CreateInvoiceRequest;
 import invoice.dtos.response.InvoiceResponse;
+import invoice.dtos.response.ReceiptResponse;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -18,6 +19,7 @@ public interface InvoiceService {
     void deleteInvoice(UUID id);
     InvoiceResponse uploadPaymentEvidence(UUID invoiceUuid, MultipartFile evidenceFile);
     Map<String, Long> getInvoiceStats(String email);
+    ReceiptResponse markInvoiceAsPaid(UUID invoiceId, String paymentMethod);
 
     List<InvoiceResponse> getAllInvoices();
 }
