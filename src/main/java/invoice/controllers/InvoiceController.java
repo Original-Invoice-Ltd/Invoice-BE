@@ -4,6 +4,9 @@ import invoice.dtos.request.CreateInvoiceRequest;
 import invoice.dtos.response.InvoiceResponse;
 import invoice.exception.OriginalInvoiceBaseException;
 import invoice.services.InvoiceService;
+import invoice.services.PaystackSubscriptionService;
+import invoice.services.UserService;
+import invoice.data.models.User;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +25,8 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 @AllArgsConstructor
 public class InvoiceController {
     private final InvoiceService invoiceService;
+    private final PaystackSubscriptionService subscriptionService;
+    private final UserService userService;
 
     @GetMapping("/test-auth")
     public ResponseEntity<?> testAuth(Principal principal) {
@@ -39,10 +44,7 @@ public class InvoiceController {
     public ResponseEntity<?> createInvoiceJson(Principal principal, @RequestBody Map<String, Object> requestData) {
         try{
             // Debug logging
-            System.out.println("=== Invoice JSON Creation Debug ===");
             System.out.println("Principal: " + (principal != null ? principal.getName() : "NULL"));
-            System.out.println("Request data: " + requestData);
-            System.out.println("===================================");
             
             if (principal == null) {
                 return new ResponseEntity<>("No authentication found", HttpStatus.UNAUTHORIZED);
@@ -69,7 +71,20 @@ public class InvoiceController {
                 return new ResponseEntity<>("No authentication found", HttpStatus.UNAUTHORIZED);
             }
             
+            // Check subscription limits before creating invoice
+            User user = userService.findByEmail(principal.getName());
+            if (!subscriptionService.canCreateInvoice(user)) {
+                return new ResponseEntity<>(Map.of(
+                    "error", "Invoice limit reached for your current plan",
+                    "message", "Please upgrade your subscription to create more invoices"
+                ), HttpStatus.FORBIDDEN);
+            }
+            
             InvoiceResponse response = invoiceService.createInvoice(request);
+            
+            // Increment invoice usage count after successful creation
+            subscriptionService.incrementInvoiceUsage(user);
+            
             return new ResponseEntity<>(response, HttpStatus.CREATED);
         }catch (OriginalInvoiceBaseException ex){
             System.out.println("Invoice creation error: " + ex.getMessage());
@@ -173,6 +188,28 @@ public class InvoiceController {
             return ResponseEntity.ok(stats);
         } catch (OriginalInvoiceBaseException ex) {
             return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
+        }
+    }
+
+    @GetMapping("/can-create")
+    public ResponseEntity<?> canCreateInvoice(Principal principal) {
+        try {
+            if (principal == null) {
+                return new ResponseEntity<>("No authentication found", HttpStatus.UNAUTHORIZED);
+            }
+            
+            User user = userService.findByEmail(principal.getName());
+            boolean canCreate = subscriptionService.canCreateInvoice(user);
+            
+            Map<String, Object> response = Map.of(
+                "canCreate", canCreate,
+                "message", canCreate ? "You can create invoices" : "Invoice limit reached for your current plan"
+            );
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception ex) {
+            return new ResponseEntity<>("Error checking invoice creation permission: " + ex.getMessage(), 
+                HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }
