@@ -12,5 +12,13 @@ pusher:
   cluster: ${PUSHER_CLUSTER:us2}
   encrypted: true
 
+# Pusher Configuration
+pusher:
+  app-id: ${PUSHER_APP_ID:your-app-id}
+  key: ${PUSHER_KEY:your-key}
+  secret: ${PUSHER_SECRET:your-secret}
+  cluster: ${PUSHER_CLUSTER:us2}
+  encrypted: true
+
 server:
   port: 8089
