@@ -65,10 +65,16 @@ public class User {
     @Transient
     private Collection<? extends GrantedAuthority> authorities;
 
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY, optional = false)
+    @Builder.Default
+    private Settings settings = new Settings();
 
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
+        if (this.settings != null) {
+            this.settings.setUser(this);
+        }
     }
 
     @PreUpdate
