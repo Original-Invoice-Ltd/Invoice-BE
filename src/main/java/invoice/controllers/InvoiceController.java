@@ -102,7 +102,18 @@ public class InvoiceController {
         try {
             List<InvoiceResponse> responses = invoiceService.getAllUserInvoices();
             return ResponseEntity.ok(responses);
-        }catch (OriginalInvoiceBaseException ex){
+        } catch (OriginalInvoiceBaseException ex) {
+            return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
+        }
+    }
+
+    @GetMapping("/all-user/{userId}")
+    public ResponseEntity<?> getAllUserInvoicesByUserId(@PathVariable("userId") UUID userId){
+        try{
+            List<InvoiceResponse> responses = invoiceService.getAllUserInvoices(userId);
+            return ResponseEntity.ok(responses);
+        }
+        catch(OriginalInvoiceBaseException ex){
             return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
         }
     }
