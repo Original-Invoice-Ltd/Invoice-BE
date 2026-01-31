@@ -1,20 +1,19 @@
 package invoice.config;
 
+import com.pengrad.telegrambot.TelegramBot;
 import org.modelmapper.ModelMapper;
-import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.client.ClientHttpRequestFactory;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
-
-import java.time.Duration;
 
 import static org.modelmapper.Conditions.isNotNull;
 import static org.modelmapper.convention.MatchingStrategies.STRICT;
 
 @Configuration
 public class AppConfig {
+    @Value("${TELEGRAM_ACCESS_TOKEN}")
+    private String botToken;
 
     @Bean
     public ModelMapper modelMapper() {
@@ -27,10 +26,12 @@ public class AppConfig {
 
     @Bean
     public RestTemplate restTemplate() {
-        return new RestTemplateBuilder()
-                .setConnectTimeout(Duration.ofSeconds(30))
-                .setReadTimeout(Duration.ofSeconds(30))
-                .build();
+        return new RestTemplate();
+    }
+
+    @Bean
+    public TelegramBot telegramBot(){
+        return new TelegramBot(botToken);
     }
 
 }
