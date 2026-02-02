@@ -30,6 +30,6 @@ public class UserResponse {
         this.roles = Collections.singletonList(String.valueOf(user.getRoles().stream().toList()));
         this.isActive = user.isVerified();
         this.phone = user.getPhoneNumber();
-        this.imageUrl = (user.getMediaUrl() != null) ? user.getMediaUrl() : "";
+        this.imageUrl = (user.getMediaUrl() != null) ? user.getMediaUrl() : user.getSettings().getProfile().getBusinessLogoUrl();
     }
 }
