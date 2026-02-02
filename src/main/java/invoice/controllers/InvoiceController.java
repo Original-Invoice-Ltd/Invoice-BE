@@ -3,6 +3,9 @@ package invoice.controllers;
 import invoice.dtos.request.CreateInvoiceRequest;
 import invoice.dtos.response.InvoiceResponse;
 import invoice.dtos.response.ReceiptResponse;
+import invoice.dtos.response.DashboardStatsResponse;
+import invoice.dtos.response.PaymentTrendResponse;
+import invoice.dtos.response.RecentInvoiceResponse;
 import invoice.exception.OriginalInvoiceBaseException;
 import invoice.services.InvoiceService;
 import invoice.services.PaystackSubscriptionService;
@@ -214,6 +217,68 @@ public class InvoiceController {
             return ResponseEntity.ok(response);
         } catch (OriginalInvoiceBaseException ex) {
             return new ResponseEntity<>(ex.getMessage(), BAD_REQUEST);
+        }
+    }
+
+    // Dashboard Analytics Endpoints
+    
+    @GetMapping("/dashboard/stats")
+    public ResponseEntity<?> getDashboardStats(Principal principal) {
+        try {
+            if (principal == null) {
+                return new ResponseEntity<>("No authentication found", HttpStatus.UNAUTHORIZED);
+            }
+            
+            DashboardStatsResponse response = invoiceService.getDashboardStats();
+            return ResponseEntity.ok(response);
+        } catch (Exception ex) {
+            System.out.println("Dashboard stats error: " + ex.getMessage());
+            ex.printStackTrace();
+            return new ResponseEntity<>(Map.of("success", false, "message", "Internal server error: " + ex.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/dashboard/payment-trends")
+    public ResponseEntity<?> getPaymentTrends(
+            Principal principal,
+            @RequestParam(defaultValue = "month") String period) {
+        try {
+            if (principal == null) {
+                return new ResponseEntity<>("No authentication found", HttpStatus.UNAUTHORIZED);
+            }
+            
+            if (!period.equals("month") && !period.equals("year")) {
+                return new ResponseEntity<>(Map.of("success", false, "message", "Invalid period parameter. Must be 'month' or 'year'"), BAD_REQUEST);
+            }
+            
+            List<PaymentTrendResponse> response = invoiceService.getPaymentTrends(period);
+            return ResponseEntity.ok(response);
+        } catch (Exception ex) {
+            System.out.println("Payment trends error: " + ex.getMessage());
+            ex.printStackTrace();
+            return new ResponseEntity<>(Map.of("success", false, "message", "Internal server error: " + ex.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/dashboard/recent-invoices")
+    public ResponseEntity<?> getRecentInvoices(
+            Principal principal,
+            @RequestParam(defaultValue = "5") Integer limit) {
+        try {
+            if (principal == null) {
+                return new ResponseEntity<>("No authentication found", HttpStatus.UNAUTHORIZED);
+            }
+            
+            if (limit < 1 || limit > 20) {
+                return new ResponseEntity<>(Map.of("success", false, "message", "Invalid limit parameter. Must be between 1 and 20"), BAD_REQUEST);
+            }
+            
+            List<RecentInvoiceResponse> response = invoiceService.getRecentInvoices(limit);
+            return ResponseEntity.ok(response);
+        } catch (Exception ex) {
+            System.out.println("Recent invoices error: " + ex.getMessage());
+            ex.printStackTrace();
+            return new ResponseEntity<>(Map.of("success", false, "message", "Internal server error: " + ex.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }

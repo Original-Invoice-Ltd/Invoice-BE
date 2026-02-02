@@ -3,6 +3,9 @@ package invoice.services;
 import invoice.dtos.request.CreateInvoiceRequest;
 import invoice.dtos.response.InvoiceResponse;
 import invoice.dtos.response.ReceiptResponse;
+import invoice.dtos.response.DashboardStatsResponse;
+import invoice.dtos.response.PaymentTrendResponse;
+import invoice.dtos.response.RecentInvoiceResponse;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -22,4 +25,9 @@ public interface InvoiceService {
     ReceiptResponse markInvoiceAsPaid(UUID invoiceId, String paymentMethod);
 
     List<InvoiceResponse> getAllInvoices();
+    
+    // Dashboard Analytics Methods
+    DashboardStatsResponse getDashboardStats();
+    List<PaymentTrendResponse> getPaymentTrends(String period);
+    List<RecentInvoiceResponse> getRecentInvoices(Integer limit);
 }

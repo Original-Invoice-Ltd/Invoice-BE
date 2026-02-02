@@ -2,7 +2,7 @@ spring:
   application:
     name: Invoice-BE
   profiles:
-    active: prod
+    active: dev
 
 # Pusher Configuration
 pusher:
