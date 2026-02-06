@@ -1,6 +1,7 @@
 package invoice.data.constants;
 
 public enum Country {
+    NONE,
     NIGERIA,
     GHANA,
     KENYA,

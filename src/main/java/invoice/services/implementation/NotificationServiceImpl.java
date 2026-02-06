@@ -1,21 +1,20 @@
 package invoice.services.implementation;
 
-import com.pusher.rest.Pusher;
 import invoice.data.constants.NotificationType;
 import invoice.data.models.Notification;
+import invoice.data.models.NotificationsPreferences;
 import invoice.data.models.User;
 import invoice.data.repositories.NotificationRepository;
+import invoice.data.repositories.UserRepository;
 import invoice.dtos.response.NotificationResponse;
+import invoice.exception.OriginalInvoiceBaseException;
 import invoice.services.NotificationService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,6 +23,8 @@ import java.util.stream.Collectors;
 public class NotificationServiceImpl implements NotificationService {
     
     private final NotificationRepository notificationRepository;
+    private final UserRepository userRepository;
+//    private final
     // Temporarily comment out Pusher to test compilation
     // private final Pusher pusher;
     
@@ -53,7 +54,10 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public List<NotificationResponse> getUserNotifications(UUID userId) {
         List<Notification> notifications = notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        User user = userRepository.findUserById(userId).orElseThrow(()-> new OriginalInvoiceBaseException("Invalid user details provided"));
+        NotificationsPreferences preferences = user.getSettings().getNotificationsPreferences();
         return notifications.stream()
+        .filter(notification -> isNotificationEnabled(notification.getType(), preferences))
                 .map(NotificationResponse::new)
                 .collect(Collectors.toList());
     }
@@ -61,30 +65,64 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public List<NotificationResponse> getUnreadNotifications(UUID userId) {
         List<Notification> notifications = notificationRepository.findByUserIdAndIsReadFalseOrderByCreatedAtDesc(userId);
+        User user = userRepository.findUserById(userId).orElseThrow(()-> new OriginalInvoiceBaseException("Invalid user details provided"));
+        NotificationsPreferences preferences = user.getSettings().getNotificationsPreferences();
         return notifications.stream()
+                .filter(notification -> isNotificationEnabled(notification.getType(), preferences))
                 .map(NotificationResponse::new)
                 .collect(Collectors.toList());
     }
     
     @Override
     public long getUnreadCount(UUID userId) {
-        return notificationRepository.countByUserIdAndIsReadFalse(userId);
+        User user = userRepository.findUserById(userId)
+                .orElseThrow(() -> new OriginalInvoiceBaseException("Invalid user details provided"));
+        NotificationsPreferences preferences = user.getSettings().getNotificationsPreferences();
+        return notificationRepository
+                .findByUserIdAndIsReadFalseOrderByCreatedAtDesc(userId)
+                .stream()
+                .filter(n -> isNotificationEnabled(n.getType(), preferences))
+                .count();
     }
     
     @Override
     @Transactional
     public void markAllAsRead(UUID userId) {
-        notificationRepository.markAllAsReadByUserId(userId);
-        log.info("Marked all notifications as read for user: {}", userId);
+//        notificationRepository.markAllAsReadByUserId(userId);
+        User user = userRepository.findUserById(userId).orElseThrow(() -> new OriginalInvoiceBaseException("Invalid user details provided"));
+        NotificationsPreferences preferences = user.getSettings().getNotificationsPreferences();
+        List<Notification> enabledUnread = notificationRepository
+                .findByUserIdAndIsReadFalseOrderByCreatedAtDesc(userId)
+                .stream()
+                .filter(n -> isNotificationEnabled(n.getType(), preferences))
+                .toList();
+        enabledUnread.forEach(n -> n.setRead(true));
+        notificationRepository.saveAll(enabledUnread);
+        log.info("Marked all enabled notifications as read for user: {}", userId);
     }
-    
-    @Override
-    @Transactional
-    public void markAsRead(UUID notificationId, UUID userId) {
-        notificationRepository.markAsReadByIdAndUserId(notificationId, userId);
-        log.info("Marked notification {} as read for user: {}", notificationId, userId);
-    }
-    
+
+//    @Override
+//    @Transactional
+//    public void markAsRead(UUID notificationId, UUID userId) {
+//        notificationRepository.markAsReadByIdAndUserId(notificationId, userId);
+//        log.info("Marked notification {} as read for user: {}", notificationId, userId);
+//    }
+@Override
+@Transactional
+public void markAsRead(UUID notificationId, UUID userId) {
+
+    User user = userRepository.findUserById(userId).orElseThrow(() -> new OriginalInvoiceBaseException("Invalid user details provided"));
+    NotificationsPreferences preferences = user.getSettings().getNotificationsPreferences();
+    Notification notification = notificationRepository.findById(notificationId)
+            .filter(n -> n.getUser().getId().equals(userId))
+            .orElseThrow(() -> new OriginalInvoiceBaseException("Notification not found"));
+    if (!isNotificationEnabled(notification.getType(), preferences))return;
+    notification.setRead(true);
+    notificationRepository.save(notification);
+    log.info("Marked notification {} as read for user {}", notificationId, userId);
+}
+
+
     @Override
     public void sendRealTimeNotification(User user, String title, String message, NotificationType type) {
         try {
@@ -108,5 +146,30 @@ public class NotificationServiceImpl implements NotificationService {
         } catch (Exception e) {
             log.error("Error sending real-time notification to user {}: {}", user.getEmail(), e.getMessage());
         }
+    }
+
+    private boolean isNotificationEnabled(NotificationType type, NotificationsPreferences preferences) {
+        return switch (type) {
+
+            case PAYMENT_RECEIVED,
+                    PAYMENT_EVIDENCE_UPLOADED ->
+                    preferences.isPaymentNotificationsEnabled();
+
+            case INVOICE_CREATED,
+                    INVOICE_UPDATED,
+                    INVOICE_RECEIVED ->
+                    preferences.isInvoiceNotificationsEnabled();
+
+            case INVOICE_DELETED ->
+                    preferences.isInvoiceReminderNotificationsEnabled();
+
+            case CLIENT_CREATED,
+                    CLIENT_UPDATED,
+                    CLIENT_DELETED ->
+                    preferences.isClientNotificationsEnabled();
+
+            case SYSTEM_NOTIFICATION ->
+                    preferences.isSystemNotificationsEnabled();
+        };
     }
 }
