@@ -50,12 +50,12 @@ public class InvoiceSettingsServiceImplementation implements InvoiceSettingsServ
     @Override
     public NotificationsDto updateNotifications(String email, NotificationsDto request) {
         User user = userService.findByEmail(email);
-        Notifications notif = user.getSettings().getNotifications();
-        notif.setWantsPaymentRecorded(request.isPaymentRecorded());
-        notif.setWantsInvoiceSentNotifications(request.isInvoiceSent());
-        notif.setWantsInvoiceReminder(request.isInvoiceReminder());
-        notif.setWantsClientAdded(request.isClientAdded());
-        notif.setWantsSystemAlerts(request.isSystemAlerts());
+        NotificationsPreferences notif = user.getSettings().getNotificationsPreferences();
+        notif.setPaymentNotificationsEnabled(request.isPaymentRecorded());
+        notif.setInvoiceNotificationsEnabled(request.isInvoiceSent());
+        notif.setInvoiceReminderNotificationsEnabled(request.isInvoiceReminder());
+        notif.setClientNotificationsEnabled(request.isClientAdded());
+        notif.setSystemNotificationsEnabled(request.isSystemAlerts());
 
         userService.updateUser(user);
         return mapToDto(notif);
@@ -79,7 +79,7 @@ public class InvoiceSettingsServiceImplementation implements InvoiceSettingsServ
     @Override
     public NotificationsDto getUserNotificationSettings(String email) {
         User user = userService.findByEmail(email);
-        return mapToDto(user.getSettings().getNotifications());
+        return mapToDto(user.getSettings().getNotificationsPreferences());
     }
 
     @Override
@@ -174,13 +174,13 @@ public class InvoiceSettingsServiceImplementation implements InvoiceSettingsServ
             tax.setTaxId(request.getTaxId());
     }
 
-    private NotificationsDto mapToDto(Notifications notificationDto) {
+    private NotificationsDto mapToDto(NotificationsPreferences notificationDto) {
         return NotificationsDto.builder()
-                .paymentRecorded(notificationDto.isWantsPaymentRecorded())
-                .invoiceSent(notificationDto.isWantsInvoiceSentNotifications())
-                .invoiceReminder(notificationDto.isWantsInvoiceReminder())
-                .clientAdded(notificationDto.isWantsClientAdded())
-                .systemAlerts(notificationDto.isWantsSystemAlerts())
+                .paymentRecorded(notificationDto.isPaymentNotificationsEnabled())
+                .invoiceSent(notificationDto.isInvoiceNotificationsEnabled())
+                .invoiceReminder(notificationDto.isInvoiceReminderNotificationsEnabled())
+                .clientAdded(notificationDto.isClientNotificationsEnabled())
+                .systemAlerts(notificationDto.isSystemNotificationsEnabled())
                 .build();
     }
 

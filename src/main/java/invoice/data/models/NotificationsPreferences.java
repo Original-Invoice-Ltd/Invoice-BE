@@ -11,15 +11,15 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class Notifications {
+public class NotificationsPreferences {
     @Builder.Default
-    private boolean wantsPaymentRecorded=false;
+    private boolean paymentNotificationsEnabled =true;
     @Builder.Default
-    private boolean wantsInvoiceSentNotifications=false;
+    private boolean invoiceNotificationsEnabled =true;
     @Builder.Default
-    private boolean wantsInvoiceReminder=false;
+    private boolean invoiceReminderNotificationsEnabled = true;
     @Builder.Default
-    private boolean wantsClientAdded=false;
+    private boolean clientNotificationsEnabled =true;
     @Builder.Default
-    private boolean wantsSystemAlerts=false;
+    private boolean systemNotificationsEnabled =true;
 }

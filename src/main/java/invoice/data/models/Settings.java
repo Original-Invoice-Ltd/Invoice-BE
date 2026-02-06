@@ -34,7 +34,7 @@ public class Settings {
 
     @Embedded
     @Builder.Default
-    private Notifications notifications = Notifications.builder().build();
+    private NotificationsPreferences notificationsPreferences = NotificationsPreferences.builder().build();
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

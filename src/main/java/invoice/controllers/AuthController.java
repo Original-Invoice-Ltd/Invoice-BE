@@ -17,7 +17,6 @@ import invoice.security.data.models.SecureUser;
 import invoice.security.services.AuthService;
 import invoice.services.UserService;
 import invoice.utiils.CookieUtils;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -38,11 +37,9 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.Map;
 
-import static invoice.security.utils.SecurityUtils.JWT_PREFIX;
 import static java.time.LocalDateTime.now;
 import static java.time.temporal.ChronoUnit.HOURS;
 import static java.time.temporal.ChronoUnit.MINUTES;
-import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 @RestController
