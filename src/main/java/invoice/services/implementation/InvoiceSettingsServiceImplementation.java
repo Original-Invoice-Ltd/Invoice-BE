@@ -79,12 +79,19 @@ public class InvoiceSettingsServiceImplementation implements InvoiceSettingsServ
     @Override
     public NotificationsDto getUserNotificationSettings(String email) {
         User user = userService.findByEmail(email);
-        return mapToDto(user.getSettings().getNotificationsPreferences());
+        NotificationsPreferences preferences = user.getSettings().getNotificationsPreferences();
+        
+        if (preferences == null) {
+            preferences = NotificationsPreferences.builder().build();
+            user.getSettings().setNotificationsPreferences(preferences);
+        }
+        return mapToDto(preferences);
     }
 
-    @Override
+    @Override   
     public TaxSettingsDto getUserTaxSettings(String email) {
         User user = userService.findByEmail(email);
+        
         return mapToDto(user.getSettings().getTaxSettings());
     }
 
@@ -175,6 +182,10 @@ public class InvoiceSettingsServiceImplementation implements InvoiceSettingsServ
     }
 
     private NotificationsDto mapToDto(NotificationsPreferences notificationDto) {
+        if (notificationDto == null) {
+            notificationDto = NotificationsPreferences.builder().build();
+        }
+        
         return NotificationsDto.builder()
                 .paymentRecorded(notificationDto.isPaymentNotificationsEnabled())
                 .invoiceSent(notificationDto.isInvoiceNotificationsEnabled())
