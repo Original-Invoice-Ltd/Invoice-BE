@@ -32,7 +32,7 @@ public class BusinessProfileSettings {
     private BusinessType businessType = BusinessType.SOLE_PROPRIETORSHIP;
     @Enumerated(EnumType.STRING)
     @Builder.Default
-    private Country country = Country.NIGERIA;
+    private Country country = Country.NONE;
     @Builder.Default
     private String businessRegistrationNumber="";
     @Builder.Default
